@@ -7,7 +7,7 @@
 
     <link rel="stylesheet" href="lib/leaflet.css" />
     <script src="lib/leaflet.js"></script>
-
+    
     <link rel="stylesheet" href="lib/leaflet.groupedlayercontrol.min.css" />
     <script src="lib/leaflet.groupedlayercontrol.min.js"></script>
 
@@ -18,7 +18,7 @@
     <script src="lib/L.Control.MousePosition.js"></script>
 
     <script src="https://d3js.org/d3.v5.min.js"></script>
-    
+
     <style>
         html, body, #map { height: 100%; margin: 0; padding: 0; }
         .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
@@ -37,25 +37,26 @@
         maxZoom: 19
     }).addTo(map);
 
-    // Add plugins
     L.control.measure({ 
         primaryLengthUnit: 'meters',
         position: 'topleft',
-        // Fix for missing image by providing a CDN link
-        localization: {
-            "start": "https://unpkg.com/leaflet-measure/examples/images/start.png",
-            "end": "https://unpkg.com/leaflet-measure/examples/images/end.png"
-        }
+        // The Leaflet Measure plugin requires an images folder to exist for its icons.
+        // If your local lib/images folder is empty, you'll still get a 404 error.
+        // It's best to either populate that folder or switch to a different plugin.
     }).addTo(map);
 
     L.control.mousePosition({ position: 'topright' }).addTo(map);
-    
+
+    // D3.js Color Scale for TAZ Areas
     var colorScale = d3.scaleSequential(d3.interpolateYlGn);
 
     function getColorForTaz(area) {
+        // If the area is 0, return a specific color.
         if (area === 0) {
             return "#faded1";
-        } else {
+        } 
+        // Otherwise, use the D3 color scale.
+        else {
             return colorScale(area);
         }
     }
@@ -69,7 +70,10 @@
                 return response.json();
             })
             .then(data => L.geoJSON(data, options))
-            .catch(error => console.error('Error loading GeoJSON:', url, error));
+            .catch(error => {
+                console.error('Error loading GeoJSON:', url, error);
+                return null; // Return null on error to prevent breaking the Promise.all chain
+            });
     }
 
     Promise.all([
@@ -105,10 +109,15 @@
 
         var [tazLayer, centroidLayer, filter1Layer, filter2Layer, filter3Layer, filter4Layer] = layers;
 
-        var tazAreas = tazLayer.toGeoJSON().features.map(f => f.properties.TAZ_Area || 0);
-        var minArea = d3.min(tazAreas);
-        var maxArea = d3.max(tazAreas);
-        colorScale.domain([minArea, maxArea]);
+        // Extract all numeric TAZ_Area values
+        var tazAreas = tazLayer.toGeoJSON().features.map(f => +f.properties.TAZ_Area || 0);
+        
+        // Remove non-finite values (like NaN) to ensure d3.extent works correctly
+        var numericTazAreas = tazAreas.filter(d => isFinite(d));
+        
+        // Use d3.extent for a reliable min/max calculation
+        var extent = d3.extent(numericTazAreas);
+        colorScale.domain(extent);
         
         // Add base layers first
         tazLayer.addTo(map);
