@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Interactive Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+od05Qn4cwXyZg6bpp1U6U2CWyKzFFP9pT+7p4Q0I=" crossorigin=""/>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o8V7d0mKhM/zL2FpxpP8uBVG+gC2KgDaaXDkfaC8hk0=" crossorigin=""></script>
+
+    <!-- Leaflet plugins for layer control (optional) -->
+    <script src="https://unpkg.com/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.css" />
+
+    <style>
+        #map { height: 100vh; width: 100%; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script>
+    // Create map
+    var map = L.map('map').setView([39.23, -76.68], 11);
+
+    // Base tile
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Function to load GeoJSON
+    function addGeoJSON(url, options, layerName) {
+        fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            var layer = L.geoJSON(data, options).bindPopup(layerName);
+            layer.addTo(map);
+        });
+    }
+
+    // ---- Zones ----
+    addGeoJSON('static/geojson/taz.geojson', {
+        style: function(feature) {
+            var value = feature.properties.TAZ_Area || 1;
+            return {color: 'black', weight: 0.5, fillColor: value ? '#ffeda0' : '#f0f0f0', fillOpacity: 0.5};
+        },
+        onEachFeature: function(feature, layer) {
+            layer.bindPopup(
+                "TAZ: " + feature.properties.TAZ +
+                "<br>Name: " + feature.properties.NAME +
+                "<br>Community: " + feature.properties.Community +
+                "<br>Area: " + feature.properties.TAZ_Area
+            );
+        }
+    }, "TAZ Areas");
+
+    addGeoJSON('static/geojson/centroid.geojson', {
+        style: {color: 'yellow', weight: 1},
+        onEachFeature: function(feature, layer) {
+            layer.bindPopup(
+                "TAZ: " + feature.properties.TAZ +
+                "<br>Type: " + feature.properties.ATYPE
+            );
+        }
+    }, "Centroid Connectors");
+
+    // ---- Filters ----
+    addGeoJSON('static/geojson/filter1.geojson', {style: {color: 'red', weight: 2}}, "Filter1");
+    addGeoJSON('static/geojson/filter2.geojson', {style: {color: 'blue', weight: 2}}, "Filter2");
+    addGeoJSON('static/geojson/filter3.geojson', {style: {color: 'green', weight: 2}}, "Filter3");
+    addGeoJSON('static/geojson/filter4.geojson', {style: {color: 'orange', weight: 2}}, "Filter4");
+
+</script>
+</body>
+</html>
