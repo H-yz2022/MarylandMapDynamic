@@ -5,73 +5,129 @@
     <title>Interactive Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <script src="https://unpkg.com/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.css" />
+    <script src="https://unpkg.com/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen/Control.FullScreen.css" />
+    <script src="https://unpkg.com/leaflet.fullscreen/Control.FullScreen.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-measure/dist/leaflet-control-measure.css" />
+    <script src="https://unpkg.com/leaflet-control-measure/dist/leaflet-control-measure.js"></script>
+
+    <script src="https://unpkg.com/leaflet.mouseposition/src/L.Control.MousePosition.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.mouseposition/src/L.Control.MousePosition.css" />
+
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <script src="https://d3js.org/d3-array.v2.min.js"></script>
+    <script src="https://d3js.org/d3-scale.v3.min.js"></script>
 
     <style>
         html, body, #map { height: 100%; margin: 0; padding: 0; }
+        .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
+        .info h4 { margin: 0 0 5px; color: #777; }
     </style>
 </head>
 <body>
 <div id="map"></div>
 
 <script>
-    // Create map
     var map = L.map('map').setView([39.23, -76.68], 11);
 
-    // Base tile
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
         subdomains: 'abcd',
         maxZoom: 19
     }).addTo(map);
 
-    // Function to load GeoJSON
-    function addGeoJSON(url, options, layerName) {
+    // Initialise layer groups
+    var zonesGroup = L.layerGroup();
+    var filtersGroup = L.layerGroup();
+
+    // D3.js Color Scale for TAZ Areas
+    var colorScale = d3.scaleSequential(d3.interpolateYlGn).domain([0, 1000]); // Adjust domain based on your data
+
+    function getColorForTaz(area) {
+        if (area == 0) {
+            return "#faded1";
+        } else {
+            return colorScale(area);
+        }
+    }
+
+    function addGeoJSON(url, options, layerName, layerGroup) {
         fetch(url)
         .then(response => response.json())
         .then(data => {
-            var layer = L.geoJSON(data, options).bindPopup(layerName);
-            layer.addTo(map);
-        });
+            var geoJsonLayer = L.geoJSON(data, options);
+            geoJsonLayer.addTo(layerGroup);
+        })
+        .catch(error => console.error('Error loading GeoJSON:', url, error));
     }
 
-    // ---- Zones ----
-    addGeoJSON('static/geojson/taz.geojson', {
-        style: function(feature) {
-            var value = feature.properties.TAZ_Area || 1;
-            return {color: 'black', weight: 0.5, fillColor: value ? '#ffeda0' : '#f0f0f0', fillOpacity: 0.5};
+    // Load TAZ GeoJSON with dynamic coloring
+    fetch('static/geojson/taz.geojson')
+    .then(response => response.json())
+    .then(data => {
+        // Find min and max TAZ_Area for the color scale
+        var tazAreas = data.features.map(f => f.properties.TAZ_Area || 0);
+        var minArea = d3.min(tazAreas);
+        var maxArea = d3.max(tazAreas);
+        colorScale.domain([minArea, maxArea]);
+
+        var tazLayer = L.geoJSON(data, {
+            style: function(feature) {
+                var area = feature.properties.TAZ_Area || 0;
+                return {
+                    fillColor: getColorForTaz(area),
+                    color: 'black',
+                    weight: 0.5,
+                    fillOpacity: 0.4
+                };
+            },
+            onEachFeature: function(feature, layer) {
+                layer.bindPopup(
+                    "TAZ: " + feature.properties.TAZ +
+                    "<br>Name: " + feature.properties.NAME +
+                    "<br>Community: " + feature.properties.Community +
+                    "<br>Area: " + feature.properties.TAZ_Area
+                );
+            }
+        });
+        tazLayer.addTo(zonesGroup);
+    });
+
+    // Load other GeoJSON files
+    addGeoJSON('static/geojson/centroid.geojson', {style: {color: 'yellow', weight: 1}}, "Centroid Connectors", zonesGroup);
+    addGeoJSON('static/geojson/filter1.geojson', {style: {color: 'red', weight: 2}}, "Filter1: AWDT>0 & CNT2LOADDIF<-20", filtersGroup);
+    addGeoJSON('static/geojson/filter2.geojson', {style: {color: 'blue', weight: 2}}, "Filter2: CNT2LOADPCT>20", filtersGroup);
+    addGeoJSON('static/geojson/filter3.geojson', {style: {color: 'green', weight: 2}}, "Filter3: AWDT>0 & CNT2LOADDIF>20", filtersGroup);
+    addGeoJSON('static/geojson/filter4.geojson', {style: {color: 'orange', weight: 2}}, "Filter4: ABSPCTDIFF>1", filtersGroup);
+
+    // Add layer groups to map
+    zonesGroup.addTo(map);
+    filtersGroup.addTo(map);
+
+    // Add Layer Control
+    L.control.groupedLayers({
+        "Zones": {
+            "TAZ Areas": zonesGroup,
+            "Centroid Connectors": L.featureGroup().addLayer(L.geoJSON(null, { style: {color: 'yellow', weight: 1} })) // Dummy layer for grouped control
         },
-        onEachFeature: function(feature, layer) {
-            layer.bindPopup(
-                "TAZ: " + feature.properties.TAZ +
-                "<br>Name: " + feature.properties.NAME +
-                "<br>Community: " + feature.properties.Community +
-                "<br>Area: " + feature.properties.TAZ_Area
-            );
+        "Filtered Highways": {
+            "Filter1": L.featureGroup().addLayer(L.geoJSON(null, { style: {color: 'red', weight: 2} })),
+            "Filter2": L.featureGroup().addLayer(L.geoJSON(null, { style: {color: 'blue', weight: 2} })),
+            "Filter3": L.featureGroup().addLayer(L.geoJSON(null, { style: {color: 'green', weight: 2} })),
+            "Filter4": L.featureGroup().addLayer(L.geoJSON(null, { style: {color: 'orange', weight: 2} }))
         }
-    }, "TAZ Areas");
+    }).addTo(map);
 
-    addGeoJSON('static/geojson/centroid.geojson', {
-        style: {color: 'yellow', weight: 1},
-        onEachFeature: function(feature, layer) {
-            layer.bindPopup(
-                "TAZ: " + feature.properties.TAZ +
-                "<br>Type: " + feature.properties.ATYPE
-            );
-        }
-    }, "Centroid Connectors");
-
-    // ---- Filters ----
-    addGeoJSON('static/geojson/filter1.geojson', {style: {color: 'red', weight: 2}}, "Filter1");
-    addGeoJSON('static/geojson/filter2.geojson', {style: {color: 'blue', weight: 2}}, "Filter2");
-    addGeoJSON('static/geojson/filter3.geojson', {style: {color: 'green', weight: 2}}, "Filter3");
-    addGeoJSON('static/geojson/filter4.geojson', {style: {color: 'orange', weight: 2}}, "Filter4");
-
+    // Add plugins to map
+    L.control.fullscreen().addTo(map);
+    L.control.measure({ primaryLengthUnit: 'meters' }).addTo(map);
+    L.control.mousePosition().addTo(map);
 </script>
 </body>
 </html>
