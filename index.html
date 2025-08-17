@@ -8,11 +8,11 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-groupedlayercontrol@3.2.1/dist/leaflet.groupedlayercontrol.min.css" />
-    <script src="https://unpkg.com/leaflet-groupedlayercontrol@3.2.1/dist/leaflet.groupedlayercontrol.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.js"></script>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-measure/dist/leaflet-control-measure.css" />
-    <script src="https://unpkg.com/leaflet-control-measure/dist/leaflet-control-measure.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.8/dist/leaflet-measure.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.8/dist/leaflet-measure.min.js"></script>
 
     <script src="https://unpkg.com/leaflet-mouse-position/src/L.Control.MousePosition.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-mouse-position/src/L.Control.MousePosition.css" />
@@ -102,7 +102,7 @@
     L.control.groupedLayers({
         "Zones": {
             "TAZ Areas": zonesGroup,
-            "Centroid Connectors": L.featureGroup()
+            "Centroid Connectors": filtersGroup
         },
         "Filtered Highways": {
             "Filter1: AWDT>0 & CNT2LOADDIF<-20": L.featureGroup(),
@@ -112,8 +112,8 @@
         }
     }).addTo(map);
 
-    L.control.measure({ primaryLengthUnit: 'meters' }).addTo(map);
-    L.control.mousePosition().addTo(map);
+    L.control.measure({ position: 'topleft' }).addTo(map);
+    L.control.mousePosition({ position: 'topright' }).addTo(map);
 </script>
 </body>
 </html>
