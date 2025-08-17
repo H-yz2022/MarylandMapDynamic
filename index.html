@@ -18,6 +18,7 @@
     <script src="lib/L.Control.MousePosition.js"></script>
 
     <script src="https://d3js.org/d3.v5.min.js"></script>
+    
     <style>
         html, body, #map { height: 100%; margin: 0; padding: 0; }
         .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
@@ -30,14 +31,23 @@
 <script>
     var map = L.map('map').setView([39.23, -76.68], 11);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    var baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
         subdomains: 'abcd',
         maxZoom: 19
     }).addTo(map);
-    
+
     // Add plugins
-    L.control.measure({ primaryLengthUnit: 'meters' }).addTo(map);
+    L.control.measure({ 
+        primaryLengthUnit: 'meters',
+        position: 'topleft',
+        // Fix for missing image by providing a CDN link
+        localization: {
+            "start": "https://unpkg.com/leaflet-measure/examples/images/start.png",
+            "end": "https://unpkg.com/leaflet-measure/examples/images/end.png"
+        }
+    }).addTo(map);
+
     L.control.mousePosition({ position: 'topright' }).addTo(map);
     
     var colorScale = d3.scaleSequential(d3.interpolateYlGn);
@@ -50,17 +60,18 @@
         }
     }
 
-    // Function to load GeoJSON and return a Promise
     function loadGeoJSON(url, options) {
         return fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                return L.geoJSON(data, options);
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
             })
+            .then(data => L.geoJSON(data, options))
             .catch(error => console.error('Error loading GeoJSON:', url, error));
     }
 
-    // Load all layers and wait for them to complete
     Promise.all([
         loadGeoJSON('static/geojson/taz.geojson', {
             style: function(feature) {
@@ -87,32 +98,29 @@
         loadGeoJSON('static/geojson/filter3.geojson', { style: { color: 'green', weight: 2 } }),
         loadGeoJSON('static/geojson/filter4.geojson', { style: { color: 'orange', weight: 2 } })
     ]).then(function(layers) {
-        var tazLayer = layers[0];
-        var centroidLayer = layers[1];
-        var filter1Layer = layers[2];
-        var filter2Layer = layers[3];
-        var filter3Layer = layers[4];
-        var filter4Layer = layers[5];
+        if (!layers.every(layer => layer)) {
+            console.error("One or more layers failed to load. Check GeoJSON file paths.");
+            return;
+        }
 
-        // Set color scale domain based on loaded TAZ data
+        var [tazLayer, centroidLayer, filter1Layer, filter2Layer, filter3Layer, filter4Layer] = layers;
+
         var tazAreas = tazLayer.toGeoJSON().features.map(f => f.properties.TAZ_Area || 0);
         var minArea = d3.min(tazAreas);
         var maxArea = d3.max(tazAreas);
         colorScale.domain([minArea, maxArea]);
         
-        // Add layers to the map and create a grouped layer control
+        // Add base layers first
         tazLayer.addTo(map);
         centroidLayer.addTo(map);
+        
+        // Add filter layers last to be on top
         filter1Layer.addTo(map);
         filter2Layer.addTo(map);
         filter3Layer.addTo(map);
         filter4Layer.addTo(map);
 
-        L.control.groupedLayers({
-            "Base Layers": {
-                "OpenStreetMap": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {})
-            }
-        }, {
+        var groupedOverlays = {
             "Zones": {
                 "TAZ Areas": tazLayer,
                 "Centroid Connectors": centroidLayer
@@ -123,7 +131,13 @@
                 "Filter3: AWDT>0 & CNT2LOADDIF>20": filter3Layer,
                 "Filter4: ABSPCTDIFF>1": filter4Layer
             }
-        }).addTo(map);
+        };
+
+        var baseMaps = {
+            "CartoDB Positron": baseTileLayer
+        };
+
+        L.control.groupedLayers(baseMaps, groupedOverlays).addTo(map);
     });
 </script>
 </body>
