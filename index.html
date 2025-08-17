@@ -11,8 +11,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.js"></script>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.7/dist/leaflet-measure.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.7/dist/leaflet-measure.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.8/dist/leaflet-measure.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.8/dist/leaflet-measure.min.js"></script>
 
     <script src="https://unpkg.com/leaflet-mouse-position/src/L.Control.MousePosition.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-mouse-position/src/L.Control.MousePosition.css" />
@@ -36,12 +36,11 @@
         subdomains: 'abcd',
         maxZoom: 19
     }).addTo(map);
-
-    // Add plugins to map
+    
+    // Add plugins
     L.control.measure({ primaryLengthUnit: 'meters' }).addTo(map);
     L.control.mousePosition({ position: 'topright' }).addTo(map);
     
-    // D3.js Color Scale for TAZ Areas
     var colorScale = d3.scaleSequential(d3.interpolateYlGn);
 
     function getColorForTaz(area) {
@@ -57,7 +56,6 @@
         return fetch(url)
             .then(response => response.json())
             .then(data => {
-                // Return the L.geoJSON object directly
                 return L.geoJSON(data, options);
             })
             .catch(error => console.error('Error loading GeoJSON:', url, error));
@@ -103,7 +101,7 @@
         var maxArea = d3.max(tazAreas);
         colorScale.domain([minArea, maxArea]);
         
-        // Add layers to the map
+        // Add layers to the map and create a grouped layer control
         tazLayer.addTo(map);
         centroidLayer.addTo(map);
         filter1Layer.addTo(map);
@@ -111,11 +109,11 @@
         filter3Layer.addTo(map);
         filter4Layer.addTo(map);
 
-        // Define groups and layers for the control
-        var baseMaps = {
-            "OpenStreetMap": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {})
-        };
-        var groupedOverlays = {
+        L.control.groupedLayers({
+            "Base Layers": {
+                "OpenStreetMap": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {})
+            }
+        }, {
             "Zones": {
                 "TAZ Areas": tazLayer,
                 "Centroid Connectors": centroidLayer
@@ -126,10 +124,7 @@
                 "Filter3: AWDT>0 & CNT2LOADDIF>20": filter3Layer,
                 "Filter4: ABSPCTDIFF>1": filter4Layer
             }
-        };
-
-        // Create the grouped layer control
-        L.control.groupedLayers(baseMaps, groupedOverlays).addTo(map);
+        }).addTo(map);
     });
 </script>
 </body>
