@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/leaflet-groupedlayercontrol@0.6.1/dist/leaflet.groupedlayercontrol.min.js"></script>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.8/dist/leaflet-measure.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.8/dist/leaflet-measure.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.8/dist/leaflet-measure.min.js"></script>
 
     <script src="https://unpkg.com/leaflet-mouse-position/src/L.Control.MousePosition.js"></script>
@@ -36,10 +36,11 @@
         subdomains: 'abcd',
         maxZoom: 19
     }).addTo(map);
-
-    var zonesGroup = L.layerGroup();
-    var filtersGroup = L.layerGroup();
-
+    
+    // Add plugins
+    L.control.measure({ primaryLengthUnit: 'meters' }).addTo(map);
+    L.control.mousePosition({ position: 'topright' }).addTo(map);
+    
     var colorScale = d3.scaleSequential(d3.interpolateYlGn);
 
     function getColorForTaz(area) {
@@ -50,70 +51,81 @@
         }
     }
 
-    function addGeoJSON(url, options, layerName, layerGroup) {
-        fetch(url)
+    // Function to load GeoJSON and return a Promise
+    function loadGeoJSON(url, options) {
+        return fetch(url)
             .then(response => response.json())
             .then(data => {
-                var geoJsonLayer = L.geoJSON(data, options);
-                geoJsonLayer.addTo(layerGroup);
+                return L.geoJSON(data, options);
             })
             .catch(error => console.error('Error loading GeoJSON:', url, error));
     }
 
-    fetch('static/geojson/taz.geojson')
-        .then(response => response.json())
-        .then(data => {
-            var tazAreas = data.features.map(f => f.properties.TAZ_Area || 0);
-            var minArea = d3.min(tazAreas);
-            var maxArea = d3.max(tazAreas);
-            colorScale.domain([minArea, maxArea]);
+    // Load all layers and wait for them to complete
+    Promise.all([
+        loadGeoJSON('static/geojson/taz.geojson', {
+            style: function(feature) {
+                var area = feature.properties.TAZ_Area || 0;
+                return {
+                    fillColor: getColorForTaz(area),
+                    color: 'black',
+                    weight: 0.5,
+                    fillOpacity: 0.4
+                };
+            },
+            onEachFeature: function(feature, layer) {
+                layer.bindPopup(
+                    "TAZ: " + feature.properties.TAZ +
+                    "<br>Name: " + feature.properties.NAME +
+                    "<br>Community: " + feature.properties.Community +
+                    "<br>Area: " + feature.properties.TAZ_Area
+                );
+            }
+        }),
+        loadGeoJSON('static/geojson/centroid.geojson', { style: { color: 'yellow', weight: 1 } }),
+        loadGeoJSON('static/geojson/filter1.geojson', { style: { color: 'red', weight: 2 } }),
+        loadGeoJSON('static/geojson/filter2.geojson', { style: { color: 'blue', weight: 2 } }),
+        loadGeoJSON('static/geojson/filter3.geojson', { style: { color: 'green', weight: 2 } }),
+        loadGeoJSON('static/geojson/filter4.geojson', { style: { color: 'orange', weight: 2 } })
+    ]).then(function(layers) {
+        var tazLayer = layers[0];
+        var centroidLayer = layers[1];
+        var filter1Layer = layers[2];
+        var filter2Layer = layers[3];
+        var filter3Layer = layers[4];
+        var filter4Layer = layers[5];
 
-            var tazLayer = L.geoJSON(data, {
-                style: function(feature) {
-                    var area = feature.properties.TAZ_Area || 0;
-                    return {
-                        fillColor: getColorForTaz(area),
-                        color: 'black',
-                        weight: 0.5,
-                        fillOpacity: 0.4
-                    };
-                },
-                onEachFeature: function(feature, layer) {
-                    layer.bindPopup(
-                        "TAZ: " + feature.properties.TAZ +
-                        "<br>Name: " + feature.properties.NAME +
-                        "<br>Community: " + feature.properties.Community +
-                        "<br>Area: " + feature.properties.TAZ_Area
-                    );
-                }
-            });
-            tazLayer.addTo(zonesGroup);
-        });
+        // Set color scale domain based on loaded TAZ data
+        var tazAreas = tazLayer.toGeoJSON().features.map(f => f.properties.TAZ_Area || 0);
+        var minArea = d3.min(tazAreas);
+        var maxArea = d3.max(tazAreas);
+        colorScale.domain([minArea, maxArea]);
+        
+        // Add layers to the map and create a grouped layer control
+        tazLayer.addTo(map);
+        centroidLayer.addTo(map);
+        filter1Layer.addTo(map);
+        filter2Layer.addTo(map);
+        filter3Layer.addTo(map);
+        filter4Layer.addTo(map);
 
-    addGeoJSON('static/geojson/centroid.geojson', {style: {color: 'yellow', weight: 1}}, "Centroid Connectors", zonesGroup);
-    addGeoJSON('static/geojson/filter1.geojson', {style: {color: 'red', weight: 2}}, "Filter1: AWDT>0 & CNT2LOADDIF<-20", filtersGroup);
-    addGeoJSON('static/geojson/filter2.geojson', {style: {color: 'blue', weight: 2}}, "Filter2: CNT2LOADPCT>20", filtersGroup);
-    addGeoJSON('static/geojson/filter3.geojson', {style: {color: 'green', weight: 2}}, "Filter3: AWDT>0 & CNT2LOADDIF>20", filtersGroup);
-    addGeoJSON('static/geojson/filter4.geojson', {style: {color: 'orange', weight: 2}}, "Filter4: ABSPCTDIFF>1", filtersGroup);
-
-    zonesGroup.addTo(map);
-    filtersGroup.addTo(map);
-
-    L.control.groupedLayers({
-        "Zones": {
-            "TAZ Areas": zonesGroup,
-            "Centroid Connectors": filtersGroup
-        },
-        "Filtered Highways": {
-            "Filter1: AWDT>0 & CNT2LOADDIF<-20": L.featureGroup(),
-            "Filter2: CNT2LOADPCT>20": L.featureGroup(),
-            "Filter3: AWDT>0 & CNT2LOADDIF>20": L.featureGroup(),
-            "Filter4: ABSPCTDIFF>1": L.featureGroup()
-        }
-    }).addTo(map);
-
-    L.control.measure({ position: 'topleft' }).addTo(map);
-    L.control.mousePosition({ position: 'topright' }).addTo(map);
+        L.control.groupedLayers({
+            "Base Layers": {
+                "OpenStreetMap": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {})
+            }
+        }, {
+            "Zones": {
+                "TAZ Areas": tazLayer,
+                "Centroid Connectors": centroidLayer
+            },
+            "Filtered Highways": {
+                "Filter1: AWDT>0 & CNT2LOADDIF<-20": filter1Layer,
+                "Filter2: CNT2LOADPCT>20": filter2Layer,
+                "Filter3: AWDT>0 & CNT2LOADDIF>20": filter3Layer,
+                "Filter4: ABSPCTDIFF>1": filter4Layer
+            }
+        }).addTo(map);
+    });
 </script>
 </body>
 </html>
