@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Aug 17 01:03:27 2025
 
-@author: huang
-"""
 
 from flask import Flask, render_template_string, send_from_directory
 import geopandas as gpd
@@ -116,4 +111,5 @@ def index():
 
 if __name__ == '__main__':
     app.run(port=8006, debug=True, use_reloader=False)
+
 
