@@ -5,16 +5,15 @@
     <title>Interactive Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+od05Qn4cwXyZg6bpp1U6U2CWyKzFFP9pT+7p4Q0I=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o8V7d0mKhM/zL2FpxpP8uBVG+gC2KgDaaXDkfaC8hk0=" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <script src="https://unpkg.com/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.css" />
 
     <style>
         html, body, #map { height: 100%; margin: 0; padding: 0; }
-        .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
-        .info h4 { margin: 0 0 5px; color: #777; }
     </style>
 </head>
 <body>
@@ -24,7 +23,7 @@
     // Create map
     var map = L.map('map').setView([39.23, -76.68], 11);
 
-    // Base tile layer
+    // Base tile
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
         subdomains: 'abcd',
@@ -32,51 +31,22 @@
     }).addTo(map);
 
     // Function to load GeoJSON
-    function addGeoJSON(url, options, layerName, tooltipFields) {
+    function addGeoJSON(url, options, layerName) {
         fetch(url)
         .then(response => response.json())
         .then(data => {
-            var geoJsonLayer = L.geoJSON(data, options);
-            
-            // Add tooltip from fields
-            if (tooltipFields) {
-                geoJsonLayer.on('mouseover', function(e) {
-                    var popupContent = "<h4>" + layerName + "</h4>";
-                    tooltipFields.forEach(function(field) {
-                        if (e.layer.feature.properties[field] !== undefined) {
-                            popupContent += "<b>" + field + ":</b> " + e.layer.feature.properties[field] + "<br/>";
-                        }
-                    });
-                    e.layer.bindPopup(popupContent, {closeButton: false, className: 'tooltip-popup'}).openPopup();
-                });
-                geoJsonLayer.on('mouseout', function(e) {
-                    e.layer.closePopup();
-                });
-            }
-
-            // Create a feature group to add to the layer control
-            var featureGroup = L.featureGroup();
-            featureGroup.addLayer(geoJsonLayer);
-            featureGroup.addTo(map);
-            layerControl.addOverlay(featureGroup, layerName);
-        })
-        .catch(error => console.error('Error loading GeoJSON:', url, error));
+            var layer = L.geoJSON(data, options).bindPopup(layerName);
+            layer.addTo(map);
+        });
     }
-
-    // Initialize layer control
-    var baseMaps = {};
-    var overlayMaps = {};
-    var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
     // ---- Zones ----
     addGeoJSON('static/geojson/taz.geojson', {
         style: function(feature) {
-            var value = feature.properties.TAZ_Area || 0;
-            var color = value > 0 ? '#ffeda0' : '#f0f0f0';
-            return {color: 'black', weight: 0.5, fillColor: color, fillOpacity: 0.5};
+            var value = feature.properties.TAZ_Area || 1;
+            return {color: 'black', weight: 0.5, fillColor: value ? '#ffeda0' : '#f0f0f0', fillOpacity: 0.5};
         },
         onEachFeature: function(feature, layer) {
-            // Simple popup for click, detailed tooltip on hover
             layer.bindPopup(
                 "TAZ: " + feature.properties.TAZ +
                 "<br>Name: " + feature.properties.NAME +
@@ -97,10 +67,11 @@
     }, "Centroid Connectors");
 
     // ---- Filters ----
-    addGeoJSON('static/geojson/filter1.geojson', {style: {color: 'red', weight: 2}}, "Filter1: AWDT>0 & CNT2LOADDIF<-20", ['AWDT_2023', 'CNT2LOADDIF']);
-    addGeoJSON('static/geojson/filter2.geojson', {style: {color: 'blue', weight: 2}}, "Filter2: CNT2LOADPCT>20", ['CNT2LOADPCT']);
-    addGeoJSON('static/geojson/filter3.geojson', {style: {color: 'green', weight: 2}}, "Filter3: AWDT>0 & CNT2LOADDIF>20", ['AWDT_2023', 'CNT2LOADDIF']);
-    addGeoJSON('static/geojson/filter4.geojson', {style: {color: 'orange', weight: 2}}, "Filter4: ABSPCTDIFF>1", ['ABSPCTDIFF']);
+    addGeoJSON('static/geojson/filter1.geojson', {style: {color: 'red', weight: 2}}, "Filter1");
+    addGeoJSON('static/geojson/filter2.geojson', {style: {color: 'blue', weight: 2}}, "Filter2");
+    addGeoJSON('static/geojson/filter3.geojson', {style: {color: 'green', weight: 2}}, "Filter3");
+    addGeoJSON('static/geojson/filter4.geojson', {style: {color: 'orange', weight: 2}}, "Filter4");
+
 </script>
 </body>
 </html>
