@@ -4,21 +4,15 @@
     <meta charset="utf-8" />
     <title>Interactive Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link rel="stylesheet" href="lib/leaflet.css" />
     <script src="lib/leaflet.js"></script>
-    
     <link rel="stylesheet" href="lib/leaflet.groupedlayercontrol.min.css" />
     <script src="lib/leaflet.groupedlayercontrol.min.js"></script>
-
     <link rel="stylesheet" href="lib/leaflet-measure.min.css" />
     <script src="lib/leaflet-measure.min.js"></script>
-
     <link rel="stylesheet" href="lib/L.Control.MousePosition.css" />
     <script src="lib/L.Control.MousePosition.js"></script>
-
     <script src="https://d3js.org/d3.v5.min.js"></script>
-
     <style>
         html, body, #map { height: 100%; margin: 0; padding: 0; }
         .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
@@ -27,40 +21,28 @@
 </head>
 <body>
 <div id="map"></div>
-
 <script>
     var map = L.map('map').setView([39.23, -76.68], 11);
-
     var baseTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
         subdomains: 'abcd',
         maxZoom: 19
     }).addTo(map);
-
-    L.control.measure({ 
+    L.control.measure({
         primaryLengthUnit: 'meters',
-        position: 'topleft',
-        // The Leaflet Measure plugin requires an images folder to exist for its icons.
-        // If your local lib/images folder is empty, you'll still get a 404 error.
-        // It's best to either populate that folder or switch to a different plugin.
+        position: 'topleft'
     }).addTo(map);
-
     L.control.mousePosition({ position: 'topright' }).addTo(map);
-
     // D3.js Color Scale for TAZ Areas
     var colorScale = d3.scaleSequential(d3.interpolateYlGn);
-
     function getColorForTaz(area) {
-        // If the area is 0, return a specific color.
         if (area === 0) {
             return "#faded1";
-        } 
-        // Otherwise, use the D3 color scale.
+        }
         else {
             return colorScale(area);
         }
     }
-
     function loadGeoJSON(url, options) {
         return fetch(url)
             .then(response => {
@@ -72,10 +54,9 @@
             .then(data => L.geoJSON(data, options))
             .catch(error => {
                 console.error('Error loading GeoJSON:', url, error);
-                return null; // Return null on error to prevent breaking the Promise.all chain
+                return null;
             });
     }
-
     Promise.all([
         loadGeoJSON('static/geojson/taz.geojson', {
             style: function(feature) {
@@ -97,38 +78,43 @@
             }
         }),
         loadGeoJSON('static/geojson/centroid.geojson', { style: { color: 'yellow', weight: 1 } }),
-        loadGeoJSON('static/geojson/filter1.geojson', { style: { color: 'red', weight: 2 } }),
-        loadGeoJSON('static/geojson/filter2.geojson', { style: { color: 'blue', weight: 2 } }),
-        loadGeoJSON('static/geojson/filter3.geojson', { style: { color: 'green', weight: 2 } }),
-        loadGeoJSON('static/geojson/filter4.geojson', { style: { color: 'orange', weight: 2 } })
+        loadGeoJSON('static/geojson/filter1.geojson', {
+            filter: function(feature) {
+                return feature.properties.AWDT > 0 && feature.properties.CNT2LOADDIF < -20;
+            },
+            style: { color: 'red', weight: 2 }
+        }),
+        loadGeoJSON('static/geojson/filter2.geojson', {
+            filter: function(feature) {
+                return feature.properties.CNT2LOADPCT > 20;
+            },
+            style: { color: 'blue', weight: 2 }
+        }),
+        loadGeoJSON('static/geojson/filter3.geojson', {
+            filter: function(feature) {
+                return feature.properties.AWDT > 0 && feature.properties.CNT2LOADDIF > 20;
+            },
+            style: { color: 'green', weight: 2 }
+        }),
+        loadGeoJSON('static/geojson/filter4.geojson', {
+            filter: function(feature) {
+                return Math.abs(feature.properties.ABSPCTDIFF) > 1;
+            },
+            style: { color: 'orange', weight: 2 }
+        })
     ]).then(function(layers) {
         if (!layers.every(layer => layer)) {
             console.error("One or more layers failed to load. Check GeoJSON file paths.");
             return;
         }
-
         var [tazLayer, centroidLayer, filter1Layer, filter2Layer, filter3Layer, filter4Layer] = layers;
-
         // Extract all numeric TAZ_Area values
         var tazAreas = tazLayer.toGeoJSON().features.map(f => +f.properties.TAZ_Area || 0);
-        
-        // Remove non-finite values (like NaN) to ensure d3.extent works correctly
+        // Remove non-finite values (like NaN)
         var numericTazAreas = tazAreas.filter(d => isFinite(d));
-        
         // Use d3.extent for a reliable min/max calculation
         var extent = d3.extent(numericTazAreas);
         colorScale.domain(extent);
-        
-        // Add base layers first
-        tazLayer.addTo(map);
-        centroidLayer.addTo(map);
-        
-        // Add filter layers last to be on top
-        filter1Layer.addTo(map);
-        filter2Layer.addTo(map);
-        filter3Layer.addTo(map);
-        filter4Layer.addTo(map);
-
         var groupedOverlays = {
             "Zones": {
                 "TAZ Areas": tazLayer,
@@ -141,12 +127,13 @@
                 "Filter4: ABSPCTDIFF>1": filter4Layer
             }
         };
-
-        var baseMaps = {
-            "CartoDB Positron": baseTileLayer
-        };
-
+        var baseMaps = { "CartoDB Positron": baseTileLayer };
         L.control.groupedLayers(baseMaps, groupedOverlays).addTo(map);
+        tazLayer.addTo(map);
+        centroidLayer.addTo(map);
+    })
+    .catch(error => {
+        console.error('Error fetching GeoJSON data:', error);
     });
 </script>
 </body>
