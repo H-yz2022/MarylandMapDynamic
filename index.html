@@ -8,24 +8,21 @@
     <link rel="stylesheet" href="./static/lib/leaflet.css" />
     <script src="./static/lib/leaflet.js"></script>
 
-    <!-- Folium.js CSS & JS for plugins (now using CDNs for stability) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@1.2.0/Control.Fullscreen.css" />
-    <script src="https://unpkg.com/leaflet.fullscreen@1.2.0/Control.Fullscreen.js"></script>
+    <!-- Folium.js CSS & JS for plugins (all local to fix CORB errors) -->
+    <link rel="stylesheet" href="./static/lib/leaflet.fullscreen.css" />
+    <script src="./static/lib/leaflet.fullscreen.js"></script>
 
-    <!-- Folium/Leaflet Plugins from your local static/lib folder -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.css" />
+    <script src="./static/lib/Control.MiniMap.min.js"></script>
+    <link rel="stylesheet" href="./static/lib/Control.MiniMap.min.css" />
     
-    <!-- FIX: Using CDN for Leaflet.TimeDimension to resolve 'nezasa is not defined' error -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-timedimension/1.1.1/leaflet.timedimension.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-timedimension/1.1.1/leaflet.timedimension.control.min.css" />
+    <script src="./static/lib/leaflet.timedimension.min.js"></script>
+    <link rel="stylesheet" href="./static/lib/leaflet.timedimension.control.min.css" />
     
     <script src="./static/lib/leaflet-measure.min.js"></script>
     <link rel="stylesheet" href="./static/lib/leaflet-measure.min.css" />
     
-    <!-- FIX: Using CDN for Leaflet.MousePosition to resolve file loading errors -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-mouse-position/1.2.0/L.Control.MousePosition.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-mouse-position/1.2.0/L.Control.MousePosition.min.css" />
+    <script src="./static/lib/L.Control.MousePosition.js"></script>
+    <link rel="stylesheet" href="./static/lib/L.Control.MousePosition.css" />
 
     <style>
         /* General body and map container styles */
@@ -43,9 +40,9 @@
         #map {
             height: 95vh;
             width: 95vw;
-            border-radius: opx;
+            border-radius: 12px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border: 0px solid #ddd;
+            border: 2px solid #ddd;
         }
 
         /* Styles for the Leaflet control panel */
