@@ -6,20 +6,20 @@
     <title>Interactive Folium-style Map</title>
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4xn+Lz/p0dD7k/hCg384L03D3b10bB1b5z0+3jC1jA=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-2+wW9c3t+2yvF7gYt8Cj/k4L0b9j9Pj3j0d1l1j9y9zY=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-2+wW9c3t+2yvF7gYt8Cj/k4L0b9j9zY=" crossorigin=""></script>
 
     <!-- Folium.js CSS & JS for plugins -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@1.2.0/Control.Fullscreen.css" />
     <script src="https://unpkg.com/leaflet.fullscreen@1.2.0/Control.Fullscreen.js"></script>
 
-    <!-- Folium/Leaflet Plugins -->
+    <!-- Folium/Leaflet Plugins from your local static/lib folder -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-timedimension/dist/leaflet.timedimension.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-timedimension/dist/leaflet.timedimension.control.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/leaflet.measurecontrol/dist/leaflet.measurecontrol.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.measurecontrol/dist/leaflet.measurecontrol.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/leaflet.mouseposition@0.1.2/L.Control.MousePosition.min.js"></script>
+    <script src="./static/lib/leaflet-timedimension/leaflet.timedimension.min.js"></script>
+    <link rel="stylesheet" href="./static/lib/leaflet-timedimension/leaflet.timedimension.control.min.css" />
+    <script src="./static/lib/leaflet.measurecontrol/leaflet.measurecontrol.min.js"></script>
+    <link rel="stylesheet" href="./static/lib/leaflet.measurecontrol/leaflet.measurecontrol.min.css" />
+    <script src="./static/lib/leaflet.mouseposition/L.Control.MousePosition.min.js"></script>
 
     <style>
         /* General body and map container styles */
@@ -64,250 +64,162 @@
     <div id="map"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // --- STEP 1: DEFINE GEOJSON DATA ---
-            // You MUST replace this with your actual GeoJSON data.
-            // You can generate this data from your shapefiles using geopandas:
-            // taz_geojson = taz.to_json()
-            // highway_geojson = highway.to_json()
-            // nodes_geojson = nodes_time.to_json()
-            // Then copy the JSON content here.
+        document.addEventListener('DOMContentLoaded', async function() {
+            // --- STEP 1: FETCH GEOJSON DATA ---
+            // The file names have been updated to TAZ.geojson, Zonehwy_Line.geojson, and Zonehwy_Node_External_Time.geojson
+            try {
+                const [tazResponse, highwayResponse, nodesTimeResponse] = await Promise.all([
+                    fetch('./static/TAZ.geojson'),
+                    fetch('./static/Zonehwy_Line.geojson'),
+                    fetch('./static/Zonehwy_Node_External_Time.geojson')
+                ]);
 
-            const tazData = {
-                "type": "FeatureCollection",
-                "features": [{
-                    "type": "Feature",
-                    "properties": {
-                        "TAZ": 101,
-                        "NAME": "Central DC",
-                        "Community": "Downtown",
-                        "TAZ_Area": 1000
+                const tazData = await tazResponse.json();
+                const highwayData = await highwayResponse.json();
+                const nodesTimeData = await nodesTimeResponse.json();
+
+                // --- STEP 2: CREATE THE MAP & LAYERS ---
+                // Initialize the map centered on your location
+                const map = L.map('map', {
+                    fullscreenControl: true,
+                    timeDimension: true,
+                    timeDimensionControl: true,
+                    center: [39.23, -76.68],
+                    zoom: 10,
+                    scrollWheelZoom: true,
+                });
+
+                // Add a base tile layer
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="http://cartodb.com/attributions">CartoDB</a>'
+                }).addTo(map);
+
+                // Create a simple colormap function for TAZ areas
+                const tazColorMap = (value) => {
+                    if (value === 0) return '#faded1';
+                    // Get min and max from the loaded data
+                    const min = tazData.features.map(f => f.properties.TAZ_Area).reduce((a, b) => Math.min(a, b));
+                    const max = tazData.features.map(f => f.properties.TAZ_Area).reduce((a, b) => Math.max(a, b));
+                    const scale = (value - min) / (max - min);
+                    const r = Math.floor(255 * (1 - scale));
+                    const g = Math.floor(215 * scale);
+                    const b = 0;
+                    return `rgb(${r}, ${g}, ${b})`;
+                };
+
+                // Add TAZ polygon layer
+                const tazLayer = L.geoJson(tazData, {
+                    style: (feature) => {
+                        return {
+                            fillColor: tazColorMap(feature.properties.TAZ_Area),
+                            color: 'black',
+                            weight: 0.5,
+                            fillOpacity: 0.4
+                        };
                     },
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [
-                            [
-                                [-77.0369, 38.9072],
-                                [-77.0375, 38.9080],
-                                [-77.0350, 38.9085],
-                                [-77.0345, 38.9077],
-                                [-77.0369, 38.9072]
-                            ]
-                        ]
+                    onEachFeature: (feature, layer) => {
+                        const props = feature.properties;
+                        layer.bindTooltip(`
+                            <b>TAZ:</b> ${props.TAZ}<br>
+                            <b>Name:</b> ${props.NAME}<br>
+                            <b>Community:</b> ${props.Community}<br>
+                            <b>TAZ Area:</b> ${props.TAZ_Area}
+                        `);
                     }
-                }, {
-                    "type": "Feature",
-                    "properties": {
-                        "TAZ": 102,
-                        "NAME": "North Arlington",
-                        "Community": "Suburbs",
-                        "TAZ_Area": 1500
+                }).addTo(map);
+
+                // Add highway line layer
+                const highwayLayer = L.geoJson(highwayData, {
+                    style: (feature) => {
+                        return {
+                            color: 'blue',
+                            weight: 1.0,
+                            opacity: 0.8
+                        };
                     },
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [
-                            [
-                                [-77.1086, 38.8929],
-                                [-77.1090, 38.8935],
-                                [-77.1070, 38.8940],
-                                [-77.1065, 38.8931],
-                                [-77.1086, 38.8929]
-                            ]
-                        ]
+                    onEachFeature: (feature, layer) => {
+                        const props = feature.properties;
+                        layer.bindTooltip(`
+                            <b>TAZ:</b> ${props.TAZ}<br>
+                            <b>Type:</b> ${props.ATYPE}<br>
+                            <b>Lanes:</b> ${props.MDLANE}<br>
+                            <b>Limit:</b> ${props.MDLIMIT}<br>
+                            <b>Time Pen:</b> ${props.TIMEPEN}
+                        `);
                     }
-                }]
-            };
+                }).addTo(map);
 
-            const highwayData = {
-                "type": "FeatureCollection",
-                "features": [{
-                    "type": "Feature",
-                    "properties": {
-                        "TAZ": 101,
-                        "ATYPE": "Highway",
-                        "MDLANE": 3,
-                        "MDLIMIT": 55,
-                        "TIMEPEN": 2.5
+                // --- STEP 3: ADD THE TIME-BASED AADT LAYER ---
+                // Get min/max AADT from the loaded data for the colormap
+                const aadtValues = nodesTimeData.features.map(f => f.properties.AADT).filter(v => v !== null);
+                const minAADT = Math.min(...aadtValues);
+                const maxAADT = Math.max(...aadtValues);
+
+                const aadtColorMap = (value) => {
+                    const scale = (value - minAADT) / (maxAADT - minAADT);
+                    const r = Math.floor(255 * scale);
+                    const g = Math.floor(255 * (1 - scale));
+                    const b = 0;
+                    return `rgb(${r}, ${g}, ${b})`;
+                };
+
+                const aadtLayer = L.timeDimension.layer.geoJson(L.geoJson(nodesTimeData, {
+                    pointToLayer: (feature, latlng) => {
+                        const radius = Math.max(2, feature.properties.AADT / 10000);
+                        return L.circleMarker(latlng, {
+                            radius: radius,
+                            fillColor: aadtColorMap(feature.properties.AADT),
+                            color: '#000',
+                            weight: 0,
+                            opacity: 0,
+                            fillOpacity: 0.7
+                        });
                     },
-                    "geometry": {
-                        "type": "LineString",
-                        "coordinates": [
-                            [-77.0369, 38.9072],
-                            [-77.0375, 38.9080]
-                        ]
+                    onEachFeature: (feature, layer) => {
+                        const props = feature.properties;
+                        layer.bindTooltip(`
+                            <b>Year:</b> ${new Date(props.time).getFullYear()}<br>
+                            <b>AADT:</b> ${props.AADT}
+                        `);
                     }
-                }, {
-                    "type": "Feature",
-                    "properties": {
-                        "TAZ": 102,
-                        "ATYPE": "Major Road",
-                        "MDLANE": 2,
-                        "MDLIMIT": 45,
-                        "TIMEPEN": 1.8
-                    },
-                    "geometry": {
-                        "type": "LineString",
-                        "coordinates": [
-                            [-77.1086, 38.8929],
-                            [-77.1090, 38.8935]
-                        ]
-                    }
-                }]
-            };
+                }), {
+                    updateTimeDimension: true,
+                    duration: 'P1Y',
+                });
+                aadtLayer.addTo(map);
 
-            // This is the most complex one to recreate. The time and style properties are crucial.
-            const nodesTimeData = {
-                "type": "FeatureCollection",
-                "features": [
-                    // Node 1
-                    { "type": "Feature", "properties": { "time": "2020-01-01", "AADT": 15000 }, "geometry": { "type": "Point", "coordinates": [-77.0369, 38.9072] } },
-                    { "type": "Feature", "properties": { "time": "2021-01-01", "AADT": 16500 }, "geometry": { "type": "Point", "coordinates": [-77.0369, 38.9072] } },
-                    { "type": "Feature", "properties": { "time": "2022-01-01", "AADT": 18000 }, "geometry": { "type": "Point", "coordinates": [-77.0369, 38.9072] } },
-                    // Node 2
-                    { "type": "Feature", "properties": { "time": "2020-01-01", "AADT": 20000 }, "geometry": { "type": "Point", "coordinates": [-77.1086, 38.8929] } },
-                    { "type": "Feature", "properties": { "time": "2021-01-01", "AADT": 22000 }, "geometry": { "type": "Point", "coordinates": [-77.1086, 38.8929] } },
-                    { "type": "Feature", "properties": { "time": "2022-01-01", "AADT": 24500 }, "geometry": { "type": "Point", "coordinates": [-77.1086, 38.8929] } }
-                ]
-            };
+                // --- STEP 4: ADD PLUGINS AND CONTROLS ---
+                const osmUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+                const osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>';
+                const osm2 = new L.TileLayer(osmUrl, {
+                    minZoom: 0,
+                    maxZoom: 13,
+                    attribution: osmAttrib
+                });
+                const miniMap = new L.Control.MiniMap(osm2, {
+                    toggleDisplay: true
+                }).addTo(map);
 
-            // --- STEP 2: CREATE THE MAP & LAYERS ---
-            // Initialize the map centered on your location
-            const map = L.map('map', {
-                fullscreenControl: true,
-                timeDimension: true,
-                timeDimensionControl: true,
-                center: [39.23, -76.68],
-                zoom: 10,
-                scrollWheelZoom: true,
-            });
+                L.control.measure({
+                    primaryLengthUnit: 'meters',
+                    secondaryLengthUnit: 'kilometers',
+                    primaryAreaUnit: 'sqmeters',
+                    secondaryAreaUnit: 'ha',
+                }).addTo(map);
 
-            // Add a base tile layer
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
-                attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="http://cartodb.com/attributions">CartoDB</a>'
-            }).addTo(map);
+                L.control.mousePosition({
+                    position: 'bottomright',
+                    separator: ' | ',
+                    emptyString: 'Unavailable',
+                    lngFirst: false,
+                    numDigits: 4,
+                }).addTo(map);
 
-            // Create a simple colormap function for TAZ areas
-            const tazColorMap = (value) => {
-                if (value === 0) return '#faded1';
-                // Simple linear scale for demonstration
-                const min = 1000;
-                const max = 1500;
-                const scale = (value - min) / (max - min);
-                const r = Math.floor(255 * (1 - scale));
-                const g = Math.floor(215 * scale);
-                const b = 0;
-                return `rgb(${r}, ${g}, ${b})`;
-            };
-
-            // Add TAZ polygon layer
-            const tazLayer = L.geoJson(tazData, {
-                style: (feature) => {
-                    return {
-                        fillColor: tazColorMap(feature.properties.TAZ_Area),
-                        color: 'black',
-                        weight: 0.5,
-                        fillOpacity: 0.4
-                    };
-                },
-                onEachFeature: (feature, layer) => {
-                    const props = feature.properties;
-                    layer.bindTooltip(`
-                        <b>TAZ:</b> ${props.TAZ}<br>
-                        <b>Name:</b> ${props.NAME}<br>
-                        <b>Community:</b> ${props.Community}<br>
-                        <b>TAZ Area:</b> ${props.TAZ_Area}
-                    `);
-                }
-            }).addTo(map);
-
-            // Add highway line layer
-            const highwayLayer = L.geoJson(highwayData, {
-                style: (feature) => {
-                    return {
-                        color: 'blue',
-                        weight: 1.0,
-                        opacity: 0.8
-                    };
-                },
-                onEachFeature: (feature, layer) => {
-                    const props = feature.properties;
-                    layer.bindTooltip(`
-                        <b>TAZ:</b> ${props.TAZ}<br>
-                        <b>Type:</b> ${props.ATYPE}<br>
-                        <b>Lanes:</b> ${props.MDLANE}<br>
-                        <b>Limit:</b> ${props.MDLIMIT}<br>
-                        <b>Time Pen:</b> ${props.TIMEPEN}
-                    `);
-                }
-            }).addTo(map);
-
-            // --- STEP 3: ADD THE TIME-BASED AADT LAYER ---
-            // This requires the Leaflet.TimeDimension plugin
-            const aadtColorMap = (value) => {
-                const min = 15000;
-                const max = 24500;
-                const scale = (value - min) / (max - min);
-                const r = Math.floor(255 * scale);
-                const g = Math.floor(255 * (1 - scale));
-                const b = 0;
-                return `rgb(${r}, ${g}, ${b})`;
-            };
-
-            const aadtLayer = L.timeDimension.layer.geoJson(L.geoJson(nodesTimeData, {
-                pointToLayer: (feature, latlng) => {
-                    const radius = Math.max(2, feature.properties.AADT / 10000);
-                    return L.circleMarker(latlng, {
-                        radius: radius,
-                        fillColor: aadtColorMap(feature.properties.AADT),
-                        color: '#000',
-                        weight: 0,
-                        opacity: 0,
-                        fillOpacity: 0.7
-                    });
-                },
-                onEachFeature: (feature, layer) => {
-                    const props = feature.properties;
-                    layer.bindTooltip(`
-                        <b>Year:</b> ${new Date(props.time).getFullYear()}<br>
-                        <b>AADT:</b> ${props.AADT}
-                    `);
-                }
-            }), {
-                // TimeDimension options
-                updateTimeDimension: true,
-                duration: 'P1Y',
-            });
-            aadtLayer.addTo(map);
-
-            // --- STEP 4: ADD PLUGINS AND CONTROLS ---
-            // Add MiniMap
-            const osmUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-            const osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>';
-            const osm2 = new L.TileLayer(osmUrl, {
-                minZoom: 0,
-                maxZoom: 13,
-                attribution: osmAttrib
-            });
-            const miniMap = new L.Control.MiniMap(osm2, {
-                toggleDisplay: true
-            }).addTo(map);
-
-            // Add MeasureControl
-            L.control.measure({
-                primaryLengthUnit: 'meters',
-                secondaryLengthUnit: 'kilometers',
-                primaryAreaUnit: 'sqmeters',
-                secondaryAreaUnit: 'ha',
-            }).addTo(map);
-
-            // Add MousePosition
-            L.control.mousePosition({
-                position: 'bottomright',
-                separator: ' | ',
-                emptyString: 'Unavailable',
-                lngFirst: false,
-                numDigits: 4,
-            }).addTo(map);
+            } catch (error) {
+                console.error('Error fetching GeoJSON data:', error);
+                const mapDiv = document.getElementById('map');
+                mapDiv.innerHTML = '<div style="text-align:center; padding-top:50px;">Failed to load map data. Please ensure the GeoJSON files are in the /static folder.</div>';
+            }
         });
     </script>
 </body>
