@@ -8,19 +8,24 @@
     <link rel="stylesheet" href="./static/lib/leaflet.css" />
     <script src="./static/lib/leaflet.js"></script>
 
-    <!-- Folium.js CSS & JS for plugins -->
+    <!-- Folium.js CSS & JS for plugins (now using CDNs for stability) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@1.2.0/Control.Fullscreen.css" />
     <script src="https://unpkg.com/leaflet.fullscreen@1.2.0/Control.Fullscreen.js"></script>
 
     <!-- Folium/Leaflet Plugins from your local static/lib folder -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.css" />
-    <script src="./static/lib/leaflet.timedimension.min.js"></script>
-    <link rel="stylesheet" href="./static/lib/leaflet.timedimension.min.css" />
+    
+    <!-- FIX: Using CDN for Leaflet.TimeDimension to resolve 'nezasa is not defined' error -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-timedimension/1.1.1/leaflet.timedimension.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-timedimension/1.1.1/leaflet.timedimension.control.min.css" />
+    
     <script src="./static/lib/leaflet-measure.min.js"></script>
     <link rel="stylesheet" href="./static/lib/leaflet-measure.min.css" />
-    <script src="./static/lib/L.Control.MousePosition.js"></script>
-    <link rel="stylesheet" href="./static/lib/L.Control.MousePosition.css" />
+    
+    <!-- FIX: Using CDN for Leaflet.MousePosition to resolve file loading errors -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-mouse-position/1.2.0/L.Control.MousePosition.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-mouse-position/1.2.0/L.Control.MousePosition.min.css" />
 
     <style>
         /* General body and map container styles */
@@ -38,7 +43,7 @@
         #map {
             height: 95vh;
             width: 95vw;
-            border-radius: 12px;
+            border-radius: opx;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             border: 0px solid #ddd;
         }
@@ -168,7 +173,7 @@
 
                 // --- STEP 4: ADD PLUGINS AND CONTROLS ---
                 const osmUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-                const osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>';
+                const osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="http://cartodb.com/attributions">CartoDB</a>';
                 const osm2 = new L.TileLayer(osmUrl, {
                     minZoom: 0,
                     maxZoom: 13,
