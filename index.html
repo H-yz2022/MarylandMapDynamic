@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Folium-style Map</title>
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4xn+Lz/p0dD7k/hCg384L03D3b10bB1b5z0+3jC1jA=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-2+wW9c3t+2yvF7gYt8Cj/k4L0b9j9zY=" crossorigin=""></script>
+    <!-- Leaflet Core Files from your local static/lib folder -->
+    <link rel="stylesheet" href="./static/lib/leaflet.css" />
+    <script src="./static/lib/leaflet.js"></script>
 
     <!-- Folium.js CSS & JS for plugins -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@1.2.0/Control.Fullscreen.css" />
@@ -15,11 +15,12 @@
     <!-- Folium/Leaflet Plugins from your local static/lib folder -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.minimap/3.6.1/Control.MiniMap.min.css" />
-    <script src="./static/lib/leaflet-timedimension/leaflet.timedimension.min.js"></script>
-    <link rel="stylesheet" href="./static/lib/leaflet-timedimension/leaflet.timedimension.control.min.css" />
-    <script src="./static/lib/leaflet.measurecontrol/leaflet.measurecontrol.min.js"></script>
-    <link rel="stylesheet" href="./static/lib/leaflet.measurecontrol/leaflet.measurecontrol.min.css" />
-    <script src="./static/lib/leaflet.mouseposition/L.Control.MousePosition.min.js"></script>
+    <script src="./static/lib/leaflet.timedimension.min.js"></script>
+    <link rel="stylesheet" href="./static/lib/leaflet.timedimension.control.min.css" />
+    <script src="./static/lib/leaflet-measure.min.js"></script>
+    <link rel="stylesheet" href="./static/lib/leaflet-measure.min.css" />
+    <script src="./static/lib/L.Control.MousePosition.js"></script>
+    <link rel="stylesheet" href="./static/lib/L.Control.MousePosition.css" />
 
     <style>
         /* General body and map container styles */
@@ -66,16 +67,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             // --- STEP 1: FETCH GEOJSON DATA ---
-            // The file names have been updated to TAZ.geojson, Zonehwy_Line.geojson, and Zonehwy_Node_External_Time.geojson
+            // Only fetching the necessary TAZ and nodes data.
             try {
-                const [tazResponse, highwayResponse, nodesTimeResponse] = await Promise.all([
+                const [tazResponse, nodesTimeResponse] = await Promise.all([
                     fetch('./static/TAZ.geojson'),
-                    fetch('./static/Zonehwy_Line.geojson'),
                     fetch('./static/Zonehwy_Node_External_Time.geojson')
                 ]);
 
                 const tazData = await tazResponse.json();
-                const highwayData = await highwayResponse.json();
                 const nodesTimeData = await nodesTimeResponse.json();
 
                 // --- STEP 2: CREATE THE MAP & LAYERS ---
@@ -128,27 +127,6 @@
                     }
                 }).addTo(map);
 
-                // Add highway line layer
-                const highwayLayer = L.geoJson(highwayData, {
-                    style: (feature) => {
-                        return {
-                            color: 'blue',
-                            weight: 1.0,
-                            opacity: 0.8
-                        };
-                    },
-                    onEachFeature: (feature, layer) => {
-                        const props = feature.properties;
-                        layer.bindTooltip(`
-                            <b>TAZ:</b> ${props.TAZ}<br>
-                            <b>Type:</b> ${props.ATYPE}<br>
-                            <b>Lanes:</b> ${props.MDLANE}<br>
-                            <b>Limit:</b> ${props.MDLIMIT}<br>
-                            <b>Time Pen:</b> ${props.TIMEPEN}
-                        `);
-                    }
-                }).addTo(map);
-
                 // --- STEP 3: ADD THE TIME-BASED AADT LAYER ---
                 // Get min/max AADT from the loaded data for the colormap
                 const aadtValues = nodesTimeData.features.map(f => f.properties.AADT).filter(v => v !== null);
@@ -190,7 +168,7 @@
 
                 // --- STEP 4: ADD PLUGINS AND CONTROLS ---
                 const osmUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-                const osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>';
+                const osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="http://cartodb.com/attributions">CartoDB</a>';
                 const osm2 = new L.TileLayer(osmUrl, {
                     minZoom: 0,
                     maxZoom: 13,
