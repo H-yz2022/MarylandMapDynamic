@@ -69,7 +69,7 @@
             // --- STEP 1: FETCH GEOJSON DATA ---
             try {
                 const [tazResponse, nodesTimeResponse] = await Promise.all([
-                    fetch('./static/TAZ.geojson'),
+                    fetch('./static/taz.geojson'),
                     fetch('./static/Zonehwy_Node_External_Time.geojson')
                 ]);
 
