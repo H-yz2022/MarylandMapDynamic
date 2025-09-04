@@ -83,7 +83,7 @@
       groupedOverlays["GeoJSON Layers"]["TAZ Zones"] = tazLayer;
       updateLayerControl();
       })
-      .catch(error => console.error('Error loading TAZ.geojason:', error));
+      .catch(error => console.error('Error loading TAZ.geojson:', error));
 
 // --- Load Zonehwy_Node_External_Time GeoJSON Data ---
       fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
@@ -111,7 +111,7 @@
       groupedOverlays["GeoJSON Layers"]["Highway Nodes"] = nodeLayer;
       updateLayerControl();
       })
-      .catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojason:', error));
+      .catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojson:', error));
 
 // Helper function to update the layer control
       function updateLayerControl() {
