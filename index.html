@@ -54,84 +54,89 @@
     <div id="map"></div>
 
     <script>
-        // --- Custom Functions for Styling and Tooltips ---
-        
-        // Function to create tooltip HTML from feature properties
-        function createTooltipContent(properties) {
-            const fields = ['TAZ_ID', 'TOWN', 'AREA', 'COUNTY', 'POP2019', 'HH2019', 'EMP2019', 'NRET2019'];
-            let content = '<table>';
-            fields.forEach(field => {
-                const value = properties[field] !== undefined ? properties[field] : 'N/A';
-                content += `<tr><th>${field}:</th><td>${value}</td></tr>`;
-            });
-            content += '</table>';
-            return content;
-        }
+        (async function() {
+            // Initialize the map, setting its center location and initial zoom level, just like in your Python code.
+            const map = L.map('map').setView([41.153380, -73.278997], 12);
 
-        // Color scale function for POP2019 data
-        function getColor(value) {
-            const max = 7215; // Max value from your Python code's logic (taz.POP2019.max())
-            if (value === 0) return "#faded1";
-            if (value < max * 0.1) return '#ffffcc';
-            if (value < max * 0.2) return '#d9f0a3';
-            if (value < max * 0.3) return '#addd8e';
-            if (value < max * 0.4) return '#78c679';
-            if (value < max * 0.5) return '#41ab5d';
-            if (value < max * 0.6) return '#238443';
-            if (value < max * 0.7) return '#006837';
-            if (value < max * 0.8) return '#004529';
-            return '#004529'; // For values >= 0.8 * max
-        }
-        
-        // --- Map Initialization and Layers ---
-        
-        // Initialize the map
-        const map = L.map('map', {
-            center: [39.23, -76.68],
-            zoom: 11,
-            zoomControl: true,
-            preferCanvas: false
-        });
+            // Add the 'CartoDB positron' tile layer. This is the base map.
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
 
-        // Add a base tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            maxZoom: 20
-        }).addTo(map);
-
-        // Define a grouped layer control
-        const groupedOverlays = {
-            "GeoJSON Layers": {}
-        };
-        
-        // --- Load TAZ GeoJSON Data ---
-        fetch('static/geojason/TAZ.geojson')
-            .then(response => response.json())
-            .then(data => {
-                const tazLayer = L.geoJson(data, {
-                    style: (feature) => {
-                        return {
-                            fillColor: getColor(feature.properties.POP2019),
-                            weight: 2,
-                            opacity: 1,
-                            color: 'white',
-                            dashArray: '3',
-                            fillOpacity: 0.7
-                        };
-                    },
-                    onEachFeature: (feature, layer) => {
-                        if (feature.properties) {
-                            const content = createTooltipContent(feature.properties);
-                            layer.bindPopup(content);
-                        }
-                    }
+            // --- Function to create the tooltip HTML, similar to your GeoJsonTooltip in Python ---
+            function createTooltipContent(properties) {
+                const fields = ['TAZ_ID', 'TOWN', 'AREA', 'COUNTY', 'POP2019', 'HH2019', 'EMP2019', 'NRET2019'];
+                let content = '';
+                fields.forEach(field => {
+                    const value = properties[field] !== undefined ? properties[field] : 'N/A';
+                    content += `<b>${field}:</b> ${value}<br>`;
                 });
-                tazLayer.addTo(map);
-                groupedOverlays["GeoJSON Layers"]["TAZ Zones (Population 2019)"] = tazLayer;
-                updateLayerControl();
-                addLegend();
-            })
-            .catch(error => console.error('Error loading TAZ.geojson:', error));
+                return content;
+            }
+
+            // --- Replicating the Population Density Colormap from Python ---
+            // A simple JavaScript function to get a color based on the value.
+            // This mimics your `branca.colormap.linear.YlGn_09.scale`.
+            const colorScale = (value) => {
+                const max = 7215; // Max value from your Python code's logic (taz.POP2019.max())
+                if (value === 0) return "#faded1";
+                if (value < max * 0.1) return '#ffffcc';
+                if (value < max * 0.2) return '#d9f0a3';
+                if (value < max * 0.3) return '#addd8e';
+                if (value < max * 0.4) return '#78c679';
+                if (value < max * 0.5) return '#41ab5d';
+                if (value < max * 0.6) return '#238443';
+                if (value < max * 0.7) return '#006837';
+                if (value < max * 0.8) return '#004529';
+                return '#004529';
+            };
+
+            // --- Load and Add the TAZ GeoJSON Layer ---
+            try {
+                // Fetch the GeoJSON data from your 'static' folder.
+                const tazResponse = await fetch('static/TAZ.geojson');
+                if (!tazResponse.ok) {
+                    throw new Error(`Failed to fetch TAZ.geojson: ${tazResponse.statusText}`);
+                }
+                const tazData = await tazResponse.json();
+
+                // Add the GeoJSON layer to the map with styling and tooltips.
+                L.geoJSON(tazData, {
+                    style: (feature) => ({
+                        fillColor: colorScale(feature.properties.POP2019), // Apply the custom color scale
+                        color: 'black',
+                        weight: 0.5,
+                        fillOpacity: 0.3,
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        // Highlight on hover
+                        layer.on('mouseover', () => {
+                            layer.setStyle({
+                                color: 'blue',
+                                weight: 4,
+                            });
+                        });
+                        layer.on('mouseout', () => {
+                            // Reset to original style when not hovered
+                            L.geoJSON(feature, {
+                                style: (f) => ({
+                                    fillColor: colorScale(f.properties.POP2019),
+                                    color: 'black',
+                                    weight: 0.5,
+                                    fillOpacity: 0.3,
+                                })
+                            }).setStyle(layer.feature, layer);
+                        });
+                        // Bind the tooltip
+                        layer.bindTooltip(createTooltipContent(feature.properties));
+                    }
+                }).addTo(map);
+
+            } catch (error) {
+                console.error("Error loading TAZ GeoJSON:", error);
+            }
 
         // --- Load Zonehwy_Node_External_Time GeoJSON Data ---
         fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
