@@ -56,7 +56,7 @@
     <script>
         (async function() {
             // Initialize the map, setting its center location and initial zoom level, just like in your Python code.
-            const map = L.map('map').setView([41.153380, -73.278997], 12);
+            const map = L.map('map').setView(39.20, -76.68], 10);
 
             // Add the 'CartoDB positron' tile layer. This is the base map.
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -96,7 +96,7 @@
             // --- Load and Add the TAZ GeoJSON Layer ---
             try {
                 // Fetch the GeoJSON data from your 'static' folder.
-                const tazResponse = await fetch('static/TAZ.geojson');
+                const tazResponse = await fetch('static/geojason/TAZ.geojson');
                 if (!tazResponse.ok) {
                     throw new Error(`Failed to fetch TAZ.geojson: ${tazResponse.statusText}`);
                 }
