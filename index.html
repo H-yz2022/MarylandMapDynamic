@@ -1,125 +1,126 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-<title>GitHub Pages Map</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>GitHub Pages Map</title>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
-<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.css"/>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<style>
-html, body, #map {
-width: 100%;
-height: 100%;
-margin: 0;
-padding: 0;
-}
-.leaflet-container { font-size: 1rem; }
-.legend { background-color: white; padding: 6px; border-radius: 5px; }
-.foliumtooltip table { margin: auto; }
-.foliumtooltip tr { text-align: left; }
-.foliumtooltip th { padding: 2px; padding-right: 8px; }
-</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <style>
+      html, body, #map {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      }
+      .leaflet-container { font-size: 1rem; }
+      .legend { background-color: white; padding: 6px; border-radius: 5px; }
+      .foliumtooltip table { margin: auto; }
+      .foliumtooltip tr { text-align: left; }
+      .foliumtooltip th { padding: 2px; padding-right: 8px; }
+    </style>
 </head>
 <body>
-<div id="map"></div>
+    <div id="map"></div>
 
-<script>
+    <script>
 // Initialize the map
-var map = L.map('map', {
-center: [39.23, -76.68],
-zoom: 11,
-zoomControl: true,
-preferCanvas: false
-});
+    var map = L.map('map', {
+      center: [39.23, -76.68],
+      zoom: 11,
+      zoomControl: true,
+      preferCanvas: false
+      });
 
 // Add a base tile layer
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-maxZoom: 20
-}).addTo(map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxZoom: 20
+      }).addTo(map);
 
 // Define a grouped layer control
-var groupedOverlays = {
-"GeoJSON Layers": {}
-};
+      var groupedOverlays = {
+      "GeoJSON Layers": {}
+      };
 
 // --- Load TAZ GeoJSON Data ---
-fetch('static/geojason/TAZ.geojson')
-.then(response => response.json())
-.then(data => {
-var tazLayer = L.geoJson(data, {
-style: function(feature) {
-return {
-fillColor: 'blue',
-weight: 2,
-opacity: 1,
-color: 'white',
-dashArray: '3',
-fillOpacity: 0.7
-};
-},
-onEachFeature: function(feature, layer) {
-// Bind pop-ups or tooltips here if needed
-if (feature.properties) {
-layer.bindTooltip(feature.properties.TAZ_NAME || feature.properties.name || "No name");
-}
-}
-});
-tazLayer.addTo(map);
-groupedOverlays["GeoJSON Layers"]["TAZ Zones"] = tazLayer;
-updateLayerControl();
-})
-.catch(error => console.error('Error loading TAZ.geojason:', error));
+      fetch('static/geojason/TAZ.geojson')
+      .then(response => response.json())
+      .then(data => {
+      var tazLayer = L.geoJson(data, {
+      style: function(feature) {
+      return {
+      fillColor: 'blue',
+      weight: 2,
+      opacity: 1,
+      color: 'white',
+      dashArray: '3',
+      fillOpacity: 0.7
+      };
+      },
+      onEachFeature: function(feature, layer) {
+      // Bind pop-ups or tooltips here if needed
+      if (feature.properties) {
+      layer.bindTooltip(feature.properties.TAZ_NAME || feature.properties.name || "No name");
+          }
+        }
+      });
+      tazLayer.addTo(map);
+      groupedOverlays["GeoJSON Layers"]["TAZ Zones"] = tazLayer;
+      updateLayerControl();
+      })
+      .catch(error => console.error('Error loading TAZ.geojason:', error));
 
 // --- Load Zonehwy_Node_External_Time GeoJSON Data ---
-fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
-.then(response => response.json())
-.then(data => {
-var nodeLayer = L.geoJson(data, {
-pointToLayer: function(feature, latlng) {
-return L.circleMarker(latlng, {
-radius: 8,
-fillColor: "red",
-color: "#000",
-weight: 1,
-opacity: 1,
-fillOpacity: 0.8
-});
-},
-onEachFeature: function(feature, layer) {
-// Bind pop-ups or tooltips here
-if (feature.properties) {
-layer.bindTooltip("Node ID: " + feature.properties.Node_ID);
-}
-}
-});
-nodeLayer.addTo(map);
-groupedOverlays["GeoJSON Layers"]["Highway Nodes"] = nodeLayer;
-updateLayerControl();
-})
-.catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojason:', error));
+      fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
+      .then(response => response.json())
+      .then(data => {
+      var nodeLayer = L.geoJson(data, {
+      pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: 8,
+        fillColor: "red",
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+      });
+      },
+      onEachFeature: function(feature, layer) {
+      // Bind pop-ups or tooltips here
+      if (feature.properties) {
+      layer.bindTooltip("Node ID: " + feature.properties.Node_ID);
+      }
+    }
+  });
+      nodeLayer.addTo(map);
+      groupedOverlays["GeoJSON Layers"]["Highway Nodes"] = nodeLayer;
+      updateLayerControl();
+      })
+      .catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojason:', error));
 
 // Helper function to update the layer control
-function updateLayerControl() {
-if (Object.keys(groupedOverlays["GeoJSON Layers"]).length === 2) {
-L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
-}
-}
+      function updateLayerControl() {
+      if (Object.keys(groupedOverlays["GeoJSON Layers"]).length === 2) {
+      L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
+      }
+  }
 
-</script>
+    </script>
 </body>
+</html>
 </html>
