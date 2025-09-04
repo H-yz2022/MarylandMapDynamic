@@ -21,106 +21,172 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <style>
-      html, body, #map {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      }
-      .leaflet-container { font-size: 1rem; }
-      .legend { background-color: white; padding: 6px; border-radius: 5px; }
-      .foliumtooltip table { margin: auto; }
-      .foliumtooltip tr { text-align: left; }
-      .foliumtooltip th { padding: 2px; padding-right: 8px; }
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .leaflet-container { font-size: 1rem; }
+        /* Style for the legend */
+        .legend {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            font-size: 14px;
+            line-height: 18px;
+            color: #555;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+        .foliumtooltip table { margin: auto; }
+        .foliumtooltip tr { text-align: left; }
+        .foliumtooltip th { padding: 2px; padding-right: 8px; }
     </style>
 </head>
 <body>
     <div id="map"></div>
 
     <script>
-// Initialize the map
-    var map = L.map('map', {
-      center: [39.23, -76.68],
-      zoom: 11,
-      zoomControl: true,
-      preferCanvas: false
-      });
-
-// Add a base tile layer
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 20
-      }).addTo(map);
-
-// Define a grouped layer control
-      var groupedOverlays = {
-      "GeoJSON Layers": {}
-      };
-
-// --- Load TAZ GeoJSON Data ---
-      fetch('static/geojason/TAZ.geojson')
-      .then(response => response.json())
-      .then(data => {
-      var tazLayer = L.geoJson(data, {
-      style: function(feature) {
-      return {
-      fillColor: 'blue',
-      weight: 2,
-      opacity: 1,
-      color: 'white',
-      dashArray: '3',
-      fillOpacity: 0.7
-      };
-      },
-      onEachFeature: function(feature, layer) {
-      // Bind pop-ups or tooltips here if needed
-      if (feature.properties) {
-      layer.bindTooltip(feature.properties.TAZ_NAME || feature.properties.name || "No name");
-          }
+        // --- Custom Functions for Styling and Tooltips ---
+        
+        // Function to create tooltip HTML from feature properties
+        function createTooltipContent(properties) {
+            const fields = ['TAZ_ID', 'TOWN', 'AREA', 'COUNTY', 'POP2019', 'HH2019', 'EMP2019', 'NRET2019'];
+            let content = '<table>';
+            fields.forEach(field => {
+                const value = properties[field] !== undefined ? properties[field] : 'N/A';
+                content += `<tr><th>${field}:</th><td>${value}</td></tr>`;
+            });
+            content += '</table>';
+            return content;
         }
-      });
-      tazLayer.addTo(map);
-      groupedOverlays["GeoJSON Layers"]["TAZ Zones"] = tazLayer;
-      updateLayerControl();
-      })
-      .catch(error => console.error('Error loading TAZ.geojson:', error));
 
-// --- Load Zonehwy_Node_External_Time GeoJSON Data ---
-      fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
-      .then(response => response.json())
-      .then(data => {
-      var nodeLayer = L.geoJson(data, {
-      pointToLayer: function(feature, latlng) {
-      return L.circleMarker(latlng, {
-        radius: 8,
-        fillColor: "red",
-        color: "#000",
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 0.8
-      });
-      },
-      onEachFeature: function(feature, layer) {
-      // Bind pop-ups or tooltips here
-      if (feature.properties) {
-      layer.bindTooltip("Node ID: " + feature.properties.Node_ID);
-      }
-    }
-  });
-      nodeLayer.addTo(map);
-      groupedOverlays["GeoJSON Layers"]["Highway Nodes"] = nodeLayer;
-      updateLayerControl();
-      })
-      .catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojson:', error));
+        // Color scale function for POP2019 data
+        function getColor(value) {
+            const max = 7215; // Max value from your Python code's logic (taz.POP2019.max())
+            if (value === 0) return "#faded1";
+            if (value < max * 0.1) return '#ffffcc';
+            if (value < max * 0.2) return '#d9f0a3';
+            if (value < max * 0.3) return '#addd8e';
+            if (value < max * 0.4) return '#78c679';
+            if (value < max * 0.5) return '#41ab5d';
+            if (value < max * 0.6) return '#238443';
+            if (value < max * 0.7) return '#006837';
+            if (value < max * 0.8) return '#004529';
+            return '#004529'; // For values >= 0.8 * max
+        }
+        
+        // --- Map Initialization and Layers ---
+        
+        // Initialize the map
+        const map = L.map('map', {
+            center: [39.23, -76.68],
+            zoom: 11,
+            zoomControl: true,
+            preferCanvas: false
+        });
 
-// Helper function to update the layer control
-      function updateLayerControl() {
-      if (Object.keys(groupedOverlays["GeoJSON Layers"]).length === 2) {
-      L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
-      }
-  }
+        // Add a base tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            maxZoom: 20
+        }).addTo(map);
 
+        // Define a grouped layer control
+        const groupedOverlays = {
+            "GeoJSON Layers": {}
+        };
+        
+        // --- Load TAZ GeoJSON Data ---
+        fetch('static/geojason/TAZ.geojson')
+            .then(response => response.json())
+            .then(data => {
+                const tazLayer = L.geoJson(data, {
+                    style: (feature) => {
+                        return {
+                            fillColor: getColor(feature.properties.POP2019),
+                            weight: 2,
+                            opacity: 1,
+                            color: 'white',
+                            dashArray: '3',
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: (feature, layer) => {
+                        if (feature.properties) {
+                            const content = createTooltipContent(feature.properties);
+                            layer.bindPopup(content);
+                        }
+                    }
+                });
+                tazLayer.addTo(map);
+                groupedOverlays["GeoJSON Layers"]["TAZ Zones (Population 2019)"] = tazLayer;
+                updateLayerControl();
+                addLegend();
+            })
+            .catch(error => console.error('Error loading TAZ.geojson:', error));
+
+        // --- Load Zonehwy_Node_External_Time GeoJSON Data ---
+        fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
+            .then(response => response.json())
+            .then(data => {
+                const nodeLayer = L.geoJson(data, {
+                    pointToLayer: (feature, latlng) => {
+                        return L.circleMarker(latlng, {
+                            radius: 8,
+                            fillColor: "red",
+                            color: "#000",
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    },
+                    onEachFeature: (feature, layer) => {
+                        if (feature.properties) {
+                            layer.bindTooltip("Node ID: " + feature.properties.Node_ID);
+                        }
+                    }
+                });
+                nodeLayer.addTo(map);
+                groupedOverlays["GeoJSON Layers"]["Highway Nodes"] = nodeLayer;
+                updateLayerControl();
+            })
+            .catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojson:', error));
+
+        // Helper function to update the layer control
+        function updateLayerControl() {
+            if (Object.keys(groupedOverlays["GeoJSON Layers"]).length === 2) {
+                L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
+            }
+        }
+        
+        // Function to add a legend to the map
+        function addLegend() {
+            const legend = L.control({ position: 'bottomright' });
+            legend.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'info legend');
+                const grades = [0, 721.5, 1443, 2164.5, 2886, 3607.5, 4329, 5050.5, 5772];
+                const labels = [];
+                const colors = ['#ffffcc', '#d9f0a3', '#addd8e', '#78c679', '#41ab5d', '#238443', '#006837', '#004529', '#faded1'];
+
+                // loop through our density intervals and generate a label with a colored square for each interval
+                for (let i = 0; i < grades.length; i++) {
+                    div.innerHTML +=
+                        '<i style="background:' + colors[i] + '"></i> ' +
+                        (i === 0 ? '0' : Math.round(grades[i-1])) + (i === 0 ? '' : ' &ndash; ' + Math.round(grades[i])) + '<br>';
+                }
+                div.innerHTML += '<i style="background:#faded1"></i> No Data';
+                return div;
+            };
+            legend.addTo(map);
+        }
     </script>
 </body>
-</html>
 </html>
