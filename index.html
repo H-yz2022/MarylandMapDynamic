@@ -73,17 +73,16 @@
             // --- Helper function for tooltip content ---
             function createTooltipContent(properties) {
                 const fields = ['TAZ_ID', 'TOWN', 'AREA', 'COUNTY', 'POP2019', 'HH2019', 'EMP2019', 'NRET2019'];
-                let content = '<table>';
+                let content = '<table class="foliumtooltip">';
                 fields.forEach(field => {
                     const value = properties[field] !== undefined ? properties[field] : 'N/A';
-                    content += `<tr><td><b>${field}:</b></td><td>${value}</td></tr>`;
+                    content += `<tr><th>${field}:</th><td>${value}</td></tr>`;
                 });
                 content += '</table>';
                 return content;
             }
 
             // --- Replicating the Population Density Colormap from Python ---
-            // A simple JavaScript function to get a color based on the value.
             const colorScale = (value) => {
                 const max = 7215; // Max value from your Python code's logic
                 if (value === 0 || value === null || value === undefined) return "#faded1";
@@ -106,7 +105,7 @@
                 }
                 const tazData = await tazResponse.json();
 
-                // Store the original style to easily reset on mouseout
+                // Add the layer to the map and save it to a variable
                 const tazLayer = L.geoJSON(tazData, {
                     style: (feature) => ({
                         fillColor: colorScale(feature.properties.POP2019),
@@ -176,8 +175,8 @@
             }
 
             // --- Helper function to update the layer control ---
-            // This now checks for both layers to be added before creating the control
             function updateLayerControl() {
+                // Check if both layers are present before creating the control
                 if (groupedOverlays["GeoJSON Layers"]["TAZ Population"] && groupedOverlays["GeoJSON Layers"]["Highway Nodes"]) {
                     L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
                 }
