@@ -58,7 +58,7 @@ var groupedOverlays = {
 };
 
 // --- Load TAZ GeoJSON Data ---
-fetch('static/geojason/TAZ.geojason')
+fetch('static/geojason/TAZ.geojson')
 .then(response => response.json())
 .then(data => {
 var tazLayer = L.geoJson(data, {
@@ -86,7 +86,7 @@ updateLayerControl();
 .catch(error => console.error('Error loading TAZ.geojason:', error));
 
 // --- Load Zonehwy_Node_External_Time GeoJSON Data ---
-fetch('static/geojason/Zonehwy_Node_External_Time.geojason')
+fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
 .then(response => response.json())
 .then(data => {
 var nodeLayer = L.geoJson(data, {
