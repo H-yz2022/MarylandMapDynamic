@@ -4,20 +4,21 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
     <title>GitHub Pages Map</title>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.css"/>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.css" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <style>
@@ -28,7 +29,6 @@
             padding: 0;
         }
         .leaflet-container { font-size: 1rem; }
-        /* Style for the legend */
         .legend {
             background-color: white;
             padding: 10px;
@@ -55,33 +55,38 @@
 
     <script>
         (async function() {
-            // Initialize the map, setting its center location and initial zoom level, just like in your Python code.
-            const map = L.map('map').setView(39.20, -76.68], 10);
+            // Fix: The array for setView was missing a closing bracket.
+            const map = L.map('map').setView([39.20, -76.68], 10);
 
-            // Add the 'CartoDB positron' tile layer. This is the base map.
+            // Add the base map tile layer
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(map);
 
-            // --- Function to create the tooltip HTML, similar to your GeoJsonTooltip in Python ---
+            // Grouped layer control setup
+            let groupedOverlays = {
+                "GeoJSON Layers": {}
+            };
+            
+            // --- Helper function for tooltip content ---
             function createTooltipContent(properties) {
                 const fields = ['TAZ_ID', 'TOWN', 'AREA', 'COUNTY', 'POP2019', 'HH2019', 'EMP2019', 'NRET2019'];
-                let content = '';
+                let content = '<table>';
                 fields.forEach(field => {
                     const value = properties[field] !== undefined ? properties[field] : 'N/A';
-                    content += `<b>${field}:</b> ${value}<br>`;
+                    content += `<tr><td><b>${field}:</b></td><td>${value}</td></tr>`;
                 });
+                content += '</table>';
                 return content;
             }
 
             // --- Replicating the Population Density Colormap from Python ---
             // A simple JavaScript function to get a color based on the value.
-            // This mimics your `branca.colormap.linear.YlGn_09.scale`.
             const colorScale = (value) => {
-                const max = 7215; // Max value from your Python code's logic (taz.POP2019.max())
-                if (value === 0) return "#faded1";
+                const max = 7215; // Max value from your Python code's logic
+                if (value === 0 || value === null || value === undefined) return "#faded1";
                 if (value < max * 0.1) return '#ffffcc';
                 if (value < max * 0.2) return '#d9f0a3';
                 if (value < max * 0.3) return '#addd8e';
@@ -95,17 +100,16 @@
 
             // --- Load and Add the TAZ GeoJSON Layer ---
             try {
-                // Fetch the GeoJSON data from your 'static' folder.
                 const tazResponse = await fetch('static/geojason/TAZ.geojson');
                 if (!tazResponse.ok) {
                     throw new Error(`Failed to fetch TAZ.geojson: ${tazResponse.statusText}`);
                 }
                 const tazData = await tazResponse.json();
 
-                // Add the GeoJSON layer to the map with styling and tooltips.
-                L.geoJSON(tazData, {
+                // Store the original style to easily reset on mouseout
+                const tazLayer = L.geoJSON(tazData, {
                     style: (feature) => ({
-                        fillColor: colorScale(feature.properties.POP2019), // Apply the custom color scale
+                        fillColor: colorScale(feature.properties.POP2019),
                         color: 'black',
                         weight: 0.5,
                         fillOpacity: 0.3,
@@ -118,31 +122,35 @@
                                 weight: 4,
                             });
                         });
+                        // Reset to original style on mouseout
                         layer.on('mouseout', () => {
-                            // Reset to original style when not hovered
-                            L.geoJSON(feature, {
-                                style: (f) => ({
-                                    fillColor: colorScale(f.properties.POP2019),
-                                    color: 'black',
-                                    weight: 0.5,
-                                    fillOpacity: 0.3,
-                                })
-                            }).setStyle(layer.feature, layer);
+                            tazLayer.resetStyle(layer);
                         });
                         // Bind the tooltip
-                        layer.bindTooltip(createTooltipContent(feature.properties));
+                        layer.bindTooltip(createTooltipContent(feature.properties), {
+                            sticky: true,
+                            className: 'foliumtooltip'
+                        });
                     }
                 }).addTo(map);
+
+                // Add the layer to the grouped layers control
+                groupedOverlays["GeoJSON Layers"]["TAZ Population"] = tazLayer;
+                updateLayerControl();
 
             } catch (error) {
                 console.error("Error loading TAZ GeoJSON:", error);
             }
 
-        // --- Load Zonehwy_Node_External_Time GeoJSON Data ---
-        fetch('static/geojason/Zonehwy_Node_External_Time.geojson')
-            .then(response => response.json())
-            .then(data => {
-                const nodeLayer = L.geoJson(data, {
+            // --- Load Zonehwy_Node_External_Time GeoJSON Data ---
+            try {
+                const nodesResponse = await fetch('static/geojason/Zonehwy_Node_External_Time.geojson');
+                if (!nodesResponse.ok) {
+                    throw new Error(`Failed to fetch Zonehwy_Node_External_Time.geojson: ${nodesResponse.statusText}`);
+                }
+                const nodesData = await nodesResponse.json();
+
+                const nodeLayer = L.geoJson(nodesData, {
                     pointToLayer: (feature, latlng) => {
                         return L.circleMarker(latlng, {
                             radius: 8,
@@ -158,42 +166,46 @@
                             layer.bindTooltip("Node ID: " + feature.properties.Node_ID);
                         }
                     }
-                });
-                nodeLayer.addTo(map);
+                }).addTo(map);
+                
                 groupedOverlays["GeoJSON Layers"]["Highway Nodes"] = nodeLayer;
                 updateLayerControl();
-            })
-            .catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojson:', error));
 
-        // Helper function to update the layer control
-        function updateLayerControl() {
-            if (Object.keys(groupedOverlays["GeoJSON Layers"]).length === 2) {
-                L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
+            } catch (error) {
+                console.error('Error loading Zonehwy_Node_External_Time.geojson:', error);
             }
-        }
-        
-        // Function to add a legend to the map
-        function addLegend() {
-            const legend = L.control({ position: 'bottomright' });
-            legend.onAdd = function (map) {
-                const div = L.DomUtil.create('div', 'info legend');
-                const grades = [0, 721.5, 1443, 2164.5, 2886, 3607.5, 4329, 5050.5, 5772];
-                const labels = [];
-                const colors = ['#ffffcc', '#d9f0a3', '#addd8e', '#78c679', '#41ab5d', '#238443', '#006837', '#004529', '#faded1'];
 
-                // loop through our density intervals and generate a label with a colored square for each interval
-                for (let i = 0; i < grades.length; i++) {
-                    div.innerHTML +=
-                        '<i style="background:' + colors[i] + '"></i> ' +
-                        (i === 0 ? '0' : Math.round(grades[i-1])) + (i === 0 ? '' : ' &ndash; ' + Math.round(grades[i])) + '<br>';
+            // --- Helper function to update the layer control ---
+            // This now checks for both layers to be added before creating the control
+            function updateLayerControl() {
+                if (groupedOverlays["GeoJSON Layers"]["TAZ Population"] && groupedOverlays["GeoJSON Layers"]["Highway Nodes"]) {
+                    L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
                 }
-                div.innerHTML += '<i style="background:#faded1"></i> No Data';
-                return div;
-            };
-            legend.addTo(map);
-        }
-            })(); // End of the self-invoking function
-    </script>
+            }
 
+            // --- Add Legend ---
+            function addLegend() {
+                const legend = L.control({ position: 'bottomright' });
+                legend.onAdd = function (map) {
+                    const div = L.DomUtil.create('div', 'info legend');
+                    const grades = [0, 721.5, 1443, 2164.5, 2886, 3607.5, 4329, 5050.5, 5772];
+                    const colors = ['#ffffcc', '#d9f0a3', '#addd8e', '#78c679', '#41ab5d', '#238443', '#006837', '#004529'];
+                    const noDataColor = '#faded1';
+                    
+                    div.innerHTML += '<h4>Population 2019</h4>';
+                    // Loop through the intervals and create a colored label for each
+                    for (let i = 0; i < grades.length -1; i++) {
+                        div.innerHTML +=
+                            '<i style="background:' + colors[i] + '"></i> ' +
+                            Math.round(grades[i]) + (grades[i + 1] ? '&ndash;' + Math.round(grades[i + 1] - 1) : '+') + '<br>';
+                    }
+                    div.innerHTML += '<i style="background:' + noDataColor + '"></i> No Data<br>';
+                    return div;
+                };
+                legend.addTo(map);
+            }
+            addLegend();
+        })();
+    </script>
 </body>
 </html>
