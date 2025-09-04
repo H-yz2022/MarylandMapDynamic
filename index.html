@@ -1,209 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Folium-style Map</title>
-    <link rel="stylesheet" href="./static/lib/leaflet.css" />
-    <script src="./static/lib/leaflet.js"></script>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>GitHub Pages Map</title>
 
-    <link rel="stylesheet" href="./static/lib/Control.Fullscreen.css" />
-    <script src="./static/lib/Control.Fullscreen.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 
-    <script src="./static/lib/Control.MiniMap.min.js"></script>
-    <link rel="stylesheet" href="./static/lib/Control.MiniMap.min.css" />
-    
-    <script src="./static/lib/leaflet.timedimension.control.js"></script>
-    <link rel="stylesheet" href="./static/lib/leaflet.timedimension.control.css" />
-    
-    <script src="./static/lib/leaflet-measure.min.js"></script>
-    <link rel="stylesheet" href="./static/lib/leaflet-measure.min.css" />
-    
-    <script src="./static/lib/L.Control.MousePosition.js"></script>
-    <link rel="stylesheet" href="./static/lib/L.Control.MousePosition.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.css"/>
 
-    <style>
-        /* General body and map container styles */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        #map {
-            height: 95vh;
-            width: 95vw;
-            border-radius: 0px;
-            box-shadow: 0 0px 0px rgba(0, 0, 0, 0.1);
-            border: 0px solid #ddd;
-        }
-
-        /* Styles for the Leaflet control panel */
-        .leaflet-control-container .leaflet-control-attribution,
-        .leaflet-control-container .leaflet-control-scale {
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 8px;
-            padding: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Style for the timeline slider */
-        .leaflet-timedimension-control-panel {
-            background-color: rgba(255, 255, 255, 0.9) !important;
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<style>
+html, body, #map {
+width: 100%;
+height: 100%;
+margin: 0;
+padding: 0;
+}
+.leaflet-container { font-size: 1rem; }
+.legend { background-color: white; padding: 6px; border-radius: 5px; }
+.foliumtooltip table { margin: auto; }
+.foliumtooltip tr { text-align: left; }
+.foliumtooltip th { padding: 2px; padding-right: 8px; }
+</style>
 </head>
 <body>
-    <div id="map"></div>
+<div id="map"></div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            // --- STEP 1: FETCH GEOJSON DATA ---
-            try {
-                const [tazResponse, nodesTimeResponse] = await Promise.all([
-                    fetch('./static/TAZ.geojson'),
-                    fetch('./static/Zonehwy_Node_External_Time.geojson')
-                ]);
+<script>
+// Initialize the map
+var map = L.map('map', {
+center: [39.23, -76.68],
+zoom: 11,
+zoomControl: true,
+preferCanvas: false
+});
 
-                const tazData = await tazResponse.json();
-                const nodesTimeData = await nodesTimeResponse.json();
+// Add a base tile layer
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+maxZoom: 20
+}).addTo(map);
 
-                // --- STEP 2: CREATE THE MAP & LAYERS ---
-                // Initialize the map with the timeDimension option enabled
-                const map = L.map('map', {
-                    fullscreenControl: true,
-                    timeDimension: true,
-                    center: [39.23, -76.68],
-                    zoom: 10,
-                    scrollWheelZoom: true,
-                });
+// Define a grouped layer control
+var groupedOverlays = {
+"GeoJSON Layers": {}
+};
 
-                // Add a base tile layer
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
-                    attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="http://cartodb.com/attributions">CartoDB</a>'
-                }).addTo(map);
+// --- Load TAZ GeoJSON Data ---
+fetch('static/geojason/TAZ.geojason')
+.then(response => response.json())
+.then(data => {
+var tazLayer = L.geoJson(data, {
+style: function(feature) {
+return {
+fillColor: 'blue',
+weight: 2,
+opacity: 1,
+color: 'white',
+dashArray: '3',
+fillOpacity: 0.7
+};
+},
+onEachFeature: function(feature, layer) {
+// Bind pop-ups or tooltips here if needed
+if (feature.properties) {
+layer.bindTooltip(feature.properties.TAZ_NAME || feature.properties.name || "No name");
+}
+}
+});
+tazLayer.addTo(map);
+groupedOverlays["GeoJSON Layers"]["TAZ Zones"] = tazLayer;
+updateLayerControl();
+})
+.catch(error => console.error('Error loading TAZ.geojason:', error));
 
-                // Create a simple colormap function for TAZ areas
-                const tazColorMap = (value) => {
-                    if (value === 0) return '#faded1';
-                    const min = tazData.features.map(f => f.properties.TAZ_Area).reduce((a, b) => Math.min(a, b));
-                    const max = tazData.features.map(f => f.properties.TAZ_Area).reduce((a, b) => Math.max(a, b));
-                    const scale = (value - min) / (max - min);
-                    const r = Math.floor(255 * (1 - scale));
-                    const g = Math.floor(215 * scale);
-                    const b = 0;
-                    return `rgb(${r}, ${g}, ${b})`;
-                };
+// --- Load Zonehwy_Node_External_Time GeoJSON Data ---
+fetch('static/geojason/Zonehwy_Node_External_Time.geojason')
+.then(response => response.json())
+.then(data => {
+var nodeLayer = L.geoJson(data, {
+pointToLayer: function(feature, latlng) {
+return L.circleMarker(latlng, {
+radius: 8,
+fillColor: "red",
+color: "#000",
+weight: 1,
+opacity: 1,
+fillOpacity: 0.8
+});
+},
+onEachFeature: function(feature, layer) {
+// Bind pop-ups or tooltips here
+if (feature.properties) {
+layer.bindTooltip("Node ID: " + feature.properties.Node_ID);
+}
+}
+});
+nodeLayer.addTo(map);
+groupedOverlays["GeoJSON Layers"]["Highway Nodes"] = nodeLayer;
+updateLayerControl();
+})
+.catch(error => console.error('Error loading Zonehwy_Node_External_Time.geojason:', error));
 
-                // Add TAZ polygon layer
-                const tazLayer = L.geoJson(tazData, {
-                    style: (feature) => {
-                        return {
-                            fillColor: tazColorMap(feature.properties.TAZ_Area),
-                            color: 'black',
-                            weight: 0.5,
-                            fillOpacity: 0.4
-                        };
-                    },
-                    onEachFeature: (feature, layer) => {
-                        const props = feature.properties;
-                        layer.bindTooltip(`
-                            <b>ACRES:</b> ${props.ACRES}<br>
-                            <b>Name:</b> ${props.NAME}<br>
-                            <b>STATE NAME:</b> ${props.STATE_NAME}<br>
-                            <b>TAZ Area:</b> ${props.TAZ_Area}
-                        `);
-                    }
-                }).addTo(map);
+// Helper function to update the layer control
+function updateLayerControl() {
+if (Object.keys(groupedOverlays["GeoJSON Layers"]).length === 2) {
+L.control.groupedLayers({}, groupedOverlays, { collapsed: false }).addTo(map);
+}
+}
 
-                // --- STEP 3: ADD THE TIME-BASED AADT LAYER ---
-                // Get min/max AADT from the loaded data for the colormap
-                const aadtValues = nodesTimeData.features.map(f => f.properties.AADT).filter(v => v !== null);
-                const minAADT = Math.min(...aadtValues);
-                const maxAADT = Math.max(...aadtValues);
-
-                const aadtColorMap = (value) => {
-                    const scale = (value - minAADT) / (maxAADT - minAADT);
-                    const r = Math.floor(255 * scale);
-                    const g = Math.floor(255 * (1 - scale));
-                    const b = 0;
-                    return `rgb(${r}, ${g}, ${b})`;
-                };
-
-                // Correctly initialize L.timeDimension.layer.geoJson
-                const aadtLayer = L.timeDimension.layer.geoJson(nodesTimeData, {
-                    updateTimeDimension: true,
-                    duration: 'P1Y',
-                    pointToLayer: (feature, latlng) => {
-                        const radius = Math.max(2, feature.properties.AADT / 10000);
-                        return L.circleMarker(latlng, {
-                            radius: radius,
-                            fillColor: aadtColorMap(feature.properties.AADT),
-                            color: '#000',
-                            weight: 0,
-                            opacity: 0,
-                            fillOpacity: 0.7
-                        });
-                    },
-                    onEachFeature: (feature, layer) => {
-                        const props = feature.properties;
-                        layer.bindTooltip(`
-                            <b>Year:</b> ${new Date(props.time).getFullYear()}<br>
-                            <b>AADT:</b> ${props.AADT}
-                        `);
-                    }
-                });
-
-                aadtLayer.addTo(map);
-
-                // --- STEP 4: ADD PLUGINS AND CONTROLS ---
-                const osmUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-                const osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="http://cartodb.com/attributions">CartoDB</a>';
-                const osm2 = new L.TileLayer(osmUrl, {
-                    minZoom: 0,
-                    maxZoom: 13,
-                    attribution: osmAttrib
-                });
-
-                const miniMap = new L.Control.MiniMap(osm2, {
-                    toggleDisplay: true
-                }).addTo(map);
-
-                L.control.timeDimension({
-                    position: 'bottomleft'
-                }).addTo(map);
-
-                L.control.measure({
-                    primaryLengthUnit: 'meters',
-                    secondaryLengthUnit: 'kilometers',
-                    primaryAreaUnit: 'sqmeters',
-                    secondaryAreaUnit: 'ha',
-                }).addTo(map);
-
-                L.control.mousePosition({
-                    position: 'bottomright',
-                    separator: ' | ',
-                    emptyString: 'Unavailable',
-                    lngFirst: false,
-                    numDigits: 4,
-                }).addTo(map);
-
-                map.invalidateSize();
-
-            } catch (error) {
-                console.error('Error fetching GeoJSON data:', error);
-                const mapDiv = document.getElementById('map');
-                mapDiv.innerHTML = '<div style="text-align:center; padding-top:50px;">Failed to load map data. Please ensure the GeoJSON files are in the /static folder.</div></div>';
-            }
-        });
-    </script>
+</script>
 </body>
 </html>
