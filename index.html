@@ -139,7 +139,9 @@
                 };
 
                 // Correctly initialize L.timeDimension.layer.geoJson
-                const geoJsonLayer = L.geoJson(nodesTimeData, {
+                const aadtLayer = L.timeDimension.layer.geoJson(nodesTimeData, {
+                    updateTimeDimension: true,
+                    duration: 'P1Y',
                     pointToLayer: (feature, latlng) => {
                         const radius = Math.max(2, feature.properties.AADT / 10000);
                         return L.circleMarker(latlng, {
@@ -158,11 +160,6 @@
                             <b>AADT:</b> ${props.AADT}
                         `);
                     }
-                });
-
-                const aadtLayer = L.timeDimension.layer.geoJson(geoJsonLayer, {
-                    updateTimeDimension: true,
-                    duration: 'P1Y'
                 });
 
                 aadtLayer.addTo(map);
